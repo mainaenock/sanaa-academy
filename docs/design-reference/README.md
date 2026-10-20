@@ -1,0 +1,9 @@
+# Homepage design reference
+
+User-supplied Stitch project: **Minimalist LMS Homepage** (`12146292299152955982`). Screen: `37d541b1970541c4a205b9c8a211523f`.
+
+`stitch-homepage.html` is the supplied source snapshot. No Stitch connector was available in this session, so a fresh API export or original screen screenshot could not be retrieved. The hosted portrait, logo and avatar URLs in the snapshot were downloaded with `curl -L`; the original navigation and footer were retained instead of using the reference replacements. The main portrait is served from `public/images/faculty-reference.png`. It is design-reference imagery and does not verify the depicted person’s identity or qualifications. Replace it through the faculty portrait setting when confirmed faculty imagery is available.
+
+The homepage uses the reference’s centered hero, Plus Jakarta Sans typography, green and blue accents, portrait/editorial composition, curriculum milestones, and rounded light pricing card. Fonts are served locally with their OFL license in `public/fonts`. Homepage styles are scoped to `.stitch-home` in `app/home.css`. A subsequent user request extended the light design to the shared navigation and footer: white translucent header, green registration button, light mobile menu, pale footer, blue headings, and matching typography. Their existing content, logo, navigation destinations, contact/social settings, and policy links are preserved. Font declarations and shared-shell styling live in `app/globals.css`.
+
+Course dates, six-week curriculum, price, discount and expiry come from existing course data. Registration links use the working application routes. The reference’s employment, mentorship, accreditation, certificate, included-domain, recordings and refund claims were not adopted. Future software/web-app and mobile-app programs remain labeled coming soon. FAQs remain on their separate page, and AI sparkle icons remain absent.

@@ -1,0 +1,53 @@
+{
+  "name": "sanaa-academy",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm",
+  "dependencies": {
+    "react": "latest",
+    "react-dom": "latest",
+    "vinext": "latest",
+    "react-server-dom-webpack": "latest",
+    "@vinext/cloudflare": "latest",
+    "zod": "latest",
+    "lucide-react": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "@vitejs/plugin-react": "latest",
+    "@vitejs/plugin-rsc": "latest",
+    "@cloudflare/vite-plugin": "1",
+    "wrangler": "latest",
+    "vitest": "^5.0.5",
+    "@cloudflare/vitest-plugin": "^1.4.4",
+    "eslint": "^10.13.0",
+    "typescript-eslint": "latest",
+    "prettier": "latest"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "start": "node scripts/start-worker.mjs",
+    "deploy": "node scripts/preflight.mjs && vinext-cloudflare deploy --config dist/server/wrangler.json",
+    "deploy:check": "node scripts/preflight.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint app components lib tests middleware.ts",
+    "test": "vitest run",
+    "smoke": "node scripts/smoke.mjs",
+    "db:migrate": "wrangler d1 migrations apply sanaa-academy --local",
+    "db:migrate:remote": "wrangler d1 migrations apply sanaa-academy --remote",
+    "types": "wrangler types",
+    "admin:create": "node scripts/create-admin.mjs",
+    "format": "prettier --write app components lib scripts tests docs *.ts *.js *.mjs *.json *.jsonc README.md"
+  },
+  "overrides": {
+    "fflate": "^0.8.3"
+  }
+}

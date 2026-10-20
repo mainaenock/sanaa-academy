@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.wrangler/
+.vinext/
+.next/
+worker-configuration.d.ts
+next-env.d.ts
+package-lock.json

@@ -1,0 +1,10 @@
+# Copy to .dev.vars (ignored). Never use test secrets in production.
+APP_URL=http://localhost:5173
+APP_ENV=development
+PAYSTACK_MODE=test
+PAYSTACK_SECRET_KEY=
+RESEND_API_KEY=
+EMAIL_FROM=
+TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=
+TURNSTILE_HOSTNAMES=localhost,127.0.0.1
