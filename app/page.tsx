@@ -65,6 +65,14 @@ export default async function Home() {
   const defaultHeadline = [defaultSite.heroHeadline, 'Learn to build what’s next.'].includes(
     s.heroHeadline,
   );
+  const workLinks = Array.from(
+    new Set(
+      Array.from(
+        s.instructorExperience.matchAll(/(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)/gi),
+        ([, domain]) => domain,
+      ),
+    ),
+  );
   const saving = Math.round((1 - price.amount / c.regular_price) * 100);
   return (
     <div style={{ '--accent': s.accentColor } as React.CSSProperties}>
@@ -141,7 +149,6 @@ export default async function Home() {
                   <span>
                     <span className="learning-dot" /> HUMAN GUIDANCE
                   </span>
-                  <span className="learning-blue-badge">Live online</span>
                 </div>
                 <h2>{s.instructorName}</h2>
                 <p className="learning-faculty-role">
@@ -156,7 +163,24 @@ export default async function Home() {
                     <BookOpen size={15} /> Learn by doing
                   </span>
                 </div>
-                <small>{s.instructorExperience}</small>
+                {workLinks.length > 0 && (
+                  <div className="learning-work">
+                    <h3>Selected work</h3>
+                    <div className="learning-work-links">
+                      {workLinks.map((domain) => (
+                        <a
+                          href={`https://${domain}`}
+                          key={domain}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {domain}
+                          <ArrowUpRight size={12} aria-hidden="true" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </aside>
             <div className="learning-editorial">

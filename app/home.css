@@ -218,16 +218,6 @@
   align-items: center;
   gap: 7px;
 }
-.learning-blue-badge {
-  font-size: 10px;
-  letter-spacing: 0;
-  background: #f0f9ff;
-  color: #006591;
-  border: 1px solid #bae6fd;
-  border-radius: 99px;
-  padding: 3px 8px;
-  white-space: nowrap;
-}
 .learning-faculty h2 {
   font-size: 21px;
   font-weight: 800;
@@ -270,12 +260,46 @@
 .learning-faculty-footer span:last-child svg {
   color: #006591;
 }
-.learning-faculty small {
-  display: block;
-  color: #64748b;
-  font-size: 10px;
-  line-height: 1.7;
+.learning-work {
+  border-top: 1px solid #e2e8f0;
   margin-top: 14px;
+  padding-top: 12px;
+}
+.learning-work h3 {
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+.learning-work-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.learning-work-links a {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  color: #334155;
+  display: inline-flex;
+  font-size: 9px;
+  font-weight: 600;
+  gap: 3px;
+  line-height: 1.4;
+  padding: 5px 7px;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.learning-work-links a:hover {
+  border-color: #86c99e;
+  color: #006d34;
+}
+.learning-work-links a svg {
+  flex: 0 0 auto;
+  color: #008340;
 }
 .learning-editorial-header {
   padding-bottom: 24px;
