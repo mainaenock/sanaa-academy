@@ -21,10 +21,10 @@
 		},
 	],
 	"vars": {
-		"APP_URL": "http://localhost:5173",
-		"APP_ENV": "development",
-		"PAYSTACK_MODE": "test",
-		"TURNSTILE_HOSTNAMES": "localhost,127.0.0.1",
+		"APP_URL": "https://sanaacademy.co.ke",
+		"APP_ENV": "production",
+		"PAYSTACK_MODE": "live",
+		"TURNSTILE_HOSTNAMES": "sanaacademy.co.ke",
 	},
 	"observability": {
 		"enabled": true,
