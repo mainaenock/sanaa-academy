@@ -403,7 +403,7 @@
 }
 .learning-milestones {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 .learning-milestone {
@@ -412,9 +412,6 @@
   padding: 16px;
   box-shadow: 0 2px 3px #0f172a02;
   background: #fff;
-}
-.learning-milestone:nth-child(-n + 2) {
-  grid-column: 1/-1;
 }
 .learning-milestone-heading {
   display: flex;
@@ -832,9 +829,6 @@
   }
   .learning-article > p {
     font-size: 13px;
-  }
-  .learning-milestones {
-    grid-template-columns: 1fr;
   }
   .learning-milestone-tag {
     display: none;
