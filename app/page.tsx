@@ -99,9 +99,6 @@ export default async function Home() {
         />
         <section className="learning-hero">
           <div className="learning-container">
-            <div className="learning-pill">
-              <span className="learning-dot" /> LEARN. BUILD. CREATE.
-            </div>
             <h1>
               {defaultHeadline ? (
                 <>
