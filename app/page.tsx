@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import {
   ArrowRight,
   ArrowUpRight,
-  BookOpen,
   CalendarDays,
   CheckCircle2,
   Clock3,
@@ -147,7 +146,7 @@ export default async function Home() {
               <div className="learning-faculty-card">
                 <div className="learning-faculty-meta">
                   <span>
-                    <span className="learning-dot" /> HUMAN GUIDANCE
+                    <span className="learning-dot" /> INSTRUCTOR
                   </span>
                 </div>
                 <h2>{s.instructorName}</h2>
@@ -155,17 +154,9 @@ export default async function Home() {
                   Mathematics &amp; Physics Teacher · Software Engineer
                 </p>
                 <p>{s.instructorBio}</p>
-                <div className="learning-faculty-footer">
-                  <span>
-                    <Video size={15} /> Instructor-led
-                  </span>
-                  <span>
-                    <BookOpen size={15} /> Learn by doing
-                  </span>
-                </div>
                 {workLinks.length > 0 && (
                   <div className="learning-work">
-                    <h3>Selected work</h3>
+                    <h3>Websites I’ve worked on</h3>
                     <div className="learning-work-links">
                       {workLinks.map((domain) => (
                         <a
@@ -178,6 +169,7 @@ export default async function Home() {
                           <ArrowUpRight size={12} aria-hidden="true" />
                         </a>
                       ))}
+                      <span className="learning-work-more">and many more</span>
                     </div>
                   </div>
                 )}

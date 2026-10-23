@@ -236,30 +236,6 @@
   font-weight: 600;
   font-size: 11px;
 }
-.learning-faculty-footer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  border-top: 1px solid #e2e8f0;
-  padding-top: 14px;
-}
-.learning-faculty-footer span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 8px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-}
-.learning-faculty-footer svg {
-  color: #008340;
-}
-.learning-faculty-footer span:last-child svg {
-  color: #006591;
-}
 .learning-work {
   border-top: 1px solid #e2e8f0;
   margin-top: 14px;
@@ -300,6 +276,12 @@
 .learning-work-links a svg {
   flex: 0 0 auto;
   color: #008340;
+}
+.learning-work-more {
+  align-self: center;
+  color: #64748b;
+  font-size: 9px;
+  font-style: italic;
 }
 .learning-editorial-header {
   padding-bottom: 24px;
@@ -747,9 +729,6 @@
   .learning-faculty-card {
     padding: 18px;
   }
-  .learning-faculty-footer {
-    grid-template-columns: 1fr;
-  }
   .learning-faculty-meta {
     flex-wrap: wrap;
   }
@@ -785,9 +764,6 @@
   }
   .learning-portrait img {
     max-height: 390px;
-  }
-  .learning-faculty-footer {
-    grid-template-columns: 1fr 1fr;
   }
   .learning-editorial-header h2 {
     font-size: 34px;
