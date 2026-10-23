@@ -130,12 +130,8 @@ export default async function Home() {
             <aside className="learning-faculty" aria-label="Learning guidance">
               <div className="learning-portrait">
                 <img
-                  src={s.instructorImage || '/images/faculty-reference.png'}
-                  alt={
-                    s.instructorImage
-                      ? s.instructorName
-                      : 'Portrait supplied with the homepage design reference'
-                  }
+                  src={s.instructorImage || '/images/enock-maina.jpg'}
+                  alt={s.instructorImage ? s.instructorName : 'Enock Maina, Sanaa Academy trainer'}
                   width="382"
                   height="512"
                 />
@@ -148,7 +144,9 @@ export default async function Home() {
                   <span className="learning-blue-badge">Live online</span>
                 </div>
                 <h2>{s.instructorName}</h2>
-                <p className="learning-faculty-role">Practical learning. Personal direction.</p>
+                <p className="learning-faculty-role">
+                  Mathematics &amp; Physics Teacher · Software Engineer
+                </p>
                 <p>{s.instructorBio}</p>
                 <div className="learning-faculty-footer">
                   <span>

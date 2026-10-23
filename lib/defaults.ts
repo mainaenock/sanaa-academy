@@ -23,11 +23,12 @@ export const defaultSite = {
   logoText: 'sanaa',
   accentColor: '#a9ef70',
   logoUrl: '',
-  instructorName: 'Learn with a guide.',
+  instructorName: 'Enock Maina',
   instructorBio:
-    'Live guidance, practical feedback, and space to ask questions as you build your own project.',
+    'A Mathematics and Physics teacher, software engineer, and Data Analyst at Uber. Enock brings practical teaching and real product-building experience to every class.',
   instructorImage: '',
-  instructorExperience: 'Faculty details will be announced before class.',
+  instructorExperience:
+    'Selected work: wemax.co.ke, sanaastudio.co.ke, kiddyvillakindergarten.com, creativeallstarsacademy.sc.ke, and more.',
   supportEmail: '',
   whatsapp: '',
   socialLinks: [] as { label: string; url: string }[],
