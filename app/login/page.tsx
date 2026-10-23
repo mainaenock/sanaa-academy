@@ -23,7 +23,7 @@ export default async function Login({
         <div className="narrow" style={{ maxWidth: 530, paddingTop: 28 }}>
           <LoginForm
             siteKey={e.TURNSTILE_SITE_KEY ?? ''}
-            ready={!!(e.RESEND_API_KEY && e.EMAIL_FROM && e.TURNSTILE_SECRET_KEY)}
+            ready={!!(e.TURNSTILE_SITE_KEY && e.TURNSTILE_SECRET_KEY)}
             next={next}
           />
         </div>

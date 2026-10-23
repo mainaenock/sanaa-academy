@@ -1,6 +1,6 @@
 # Sanaa Academy
 
-A database-powered, mobile-first academy built with the Next.js App Router API on **vinext**, React, TypeScript, Tailwind, Cloudflare Workers and D1. It includes the marketing website, verified Paystack enrollment, passwordless accounts, a student portal, and an administration dashboard.
+A database-powered, mobile-first academy built with the Next.js App Router API on **vinext**, React, TypeScript, Tailwind, Cloudflare Workers and D1. It includes the marketing website, Paystack enrollment, password accounts, a student portal, and an administration dashboard.
 
 ## Run locally
 
@@ -12,20 +12,22 @@ Copy-Item .dev.vars.example .dev.vars
 npm run dev -- --port 5173
 ```
 
-Open `http://localhost:5173`. The public website works with the seeded local database. Add your provider configuration to the ignored `.dev.vars` to enable email sign-in, Turnstile and Paystack test checkout. There are no demo credentials, fabricated payments, or client-only database substitutes.
+Open `http://localhost:5173`. The public website works with the seeded local database. Add your provider configuration to the ignored `.dev.vars` to enable Turnstile and Paystack test checkout. There are no demo credentials, fabricated payments, or client-only database substitutes.
 
 ## Administrator setup
 
 ```powershell
+$env:SANAA_ADMIN_PASSWORD = 'choose-a-long-unique-password'
 npm run admin:create -- --email YOUR_ADMIN_EMAIL
+Remove-Item Env:SANAA_ADMIN_PASSWORD
 ```
 
-Sign in at `/login?next=/admin` with that email. The role is granted in local D1 and mailbox ownership is verified through a one-time code. To bootstrap production, configure the real D1 binding and explicitly append `--remote` to the command. No permanent password is sent or stored.
+Sign in at `/login?next=/admin` with that email and password. To bootstrap production, configure the real D1 binding and explicitly append `--remote` to the command.
 
 ## What is implemented
 
 - Server-rendered public website with six-week curriculum, time-aware pricing, editable FAQs/instructor/benefits/branding, accessible navigation, reduced-motion support and responsive layouts.
-- Verified email enrollment, guardian-controlled minor consent, server-priced KES Paystack hosted checkout, saved registration recovery and payment confirmation.
+- Student account and profile registration, guardian-controlled minor consent, server-priced KES Paystack hosted M-PESA/card checkout, saved registration recovery and payment confirmation.
 - Transaction verification, signed raw-body webhooks, duplicate protection, atomic enrollment/outbox settlement, failure recovery and refund/reversal handling.
 - Student curriculum and lesson content, completion tracking, private class sessions, resources, assignments, project submissions, feedback, profile and privacy controls.
 - Role-protected admin views, learner search/filter/export, progress corrections, curriculum CRUD/order, schedule management, website/program settings, payment reconciliation, announcements, email outbox and audit logs.
@@ -62,8 +64,8 @@ app/
 components/
   brand.tsx, public-shell.tsx       Shared public layout
   build-scene.tsx, countdown.tsx    Lightweight public visual interactions
-  login-form.tsx, turnstile.tsx     Email verification and bot protection
-  register-form.tsx                 Guardian-aware enrollment form
+  login-form.tsx, turnstile.tsx     Password sign-in and bot protection
+  register-form.tsx                 Student details, account and enrollment form
   payment-status.tsx                Server-verified payment recovery
   workspace-shell.tsx               Responsive private navigation
   student-app.tsx                   Learning, projects, profile and privacy
@@ -72,7 +74,7 @@ components/
 lib/
   api.ts, http.ts                   Routing, origin checks, errors and rate limits
   db.ts, defaults.ts                D1 access and initial public content
-  auth.ts, crypto.ts                One-time codes, sessions and Web Crypto
+  auth.ts, crypto.ts                Password hashes, sessions and Web Crypto
   payments.ts, email.ts             Paystack lifecycle and durable email delivery
   student.ts                       Enrolled learner operations
   admin.ts, admin-model.ts          Authorized management, validation and auditing

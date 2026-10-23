@@ -17,7 +17,7 @@ export function RegisterForm({
   existing,
   guardian,
 }: {
-  user: User;
+  user: User | null;
   csrf: string;
   siteKey: string;
   ready: boolean;
@@ -27,7 +27,9 @@ export function RegisterForm({
   existing: { id: string; status: string } | null;
   guardian: { name: string; email: string; phone: string; learner_email: string } | null;
 }) {
-  const [age, setAge] = useState(user.age_category ?? 'adult'),
+  const [age, setAge] = useState(user?.age_category ?? 'adult'),
+    [accountEmail, setAccountEmail] = useState(''),
+    [learnerEmail, setLearnerEmail] = useState(''),
     [token, setToken] = useState(''),
     [nonce, setNonce] = useState(0),
     [busy, setBusy] = useState(false),
@@ -49,9 +51,17 @@ export function RegisterForm({
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const v = formValues(event.currentTarget);
+    let requestCsrf = csrf;
     setBusy(true);
     setError('');
     try {
+      if (!user) {
+        const account = await api<{ csrf: string }>('auth/register', {
+          email: v.accountEmail,
+          password: v.password,
+        });
+        requestCsrf = account.csrf;
+      }
       const result = await api<{ url: string }>(
         'enroll',
         {
@@ -62,7 +72,7 @@ export function RegisterForm({
           experience: v.experience,
           projectInterest: v.projectInterest,
           guardianName: v.guardianName ?? '',
-          guardianEmail: v.guardianEmail ?? '',
+          guardianEmail: user?.email ?? v.accountEmail ?? v.guardianEmail ?? '',
           guardianPhone: v.guardianPhone ?? '',
           guardianConsent: v.guardianConsent === 'on',
           terms: v.terms === 'on',
@@ -70,7 +80,7 @@ export function RegisterForm({
           turnstileToken: token,
           expectedAmount: price.amount,
         },
-        csrf,
+        requestCsrf,
       );
       window.location.assign(result.url);
     } catch (error) {
@@ -170,15 +180,48 @@ export function RegisterForm({
       <form className="card" onSubmit={submit}>
         <h2>Tell us a little about the learner.</h2>
         <p className="tiny">
-          Signed in as {user.email}. For minors, this must be the parent or guardian’s verified
-          email.
+          Your details are saved to your account. Portal access starts after Paystack confirms
+          payment.
         </p>
         <div className="form-grid">
+          {!user && (
+            <>
+              <label className="field">
+                <span>Account email</span>
+                <input
+                  type="email"
+                  name="accountEmail"
+                  autoComplete="email"
+                  value={accountEmail}
+                  onChange={(e) => {
+                    setAccountEmail(e.target.value);
+                    if (age === 'adult') setLearnerEmail(e.target.value);
+                  }}
+                  required
+                  maxLength={254}
+                />
+              </label>
+              <label className="field">
+                <span>Create password</span>
+                <input
+                  type="password"
+                  name="password"
+                  autoComplete="new-password"
+                  minLength={10}
+                  maxLength={128}
+                  required
+                />
+                <small className="tiny">
+                  Use at least 10 characters. You’ll use this to sign in anytime.
+                </small>
+              </label>
+            </>
+          )}
           <label className="field">
             <span>Learner’s full name</span>
             <input
               name="name"
-              defaultValue={user.name}
+              defaultValue={user?.name}
               autoComplete="name"
               required
               minLength={2}
@@ -197,7 +240,9 @@ export function RegisterForm({
             <input
               type="email"
               name="learnerEmail"
-              defaultValue={guardian?.learner_email ?? user.email}
+              {...(user
+                ? { defaultValue: guardian?.learner_email ?? user.email }
+                : { value: learnerEmail, onChange: (e) => setLearnerEmail(e.target.value) })}
               required
               maxLength={254}
             />
@@ -207,7 +252,7 @@ export function RegisterForm({
             <input
               type="tel"
               name="phone"
-              defaultValue={user.phone}
+              defaultValue={user?.phone}
               required
               maxLength={22}
               autoComplete="tel"
@@ -217,7 +262,7 @@ export function RegisterForm({
             <span>Prior experience (optional)</span>
             <input
               name="experience"
-              defaultValue={user.experience}
+              defaultValue={user?.experience}
               maxLength={500}
               placeholder="New to all of this? You’re in the right place."
             />
@@ -226,7 +271,7 @@ export function RegisterForm({
             <span>Your website idea (optional)</span>
             <textarea
               name="projectInterest"
-              defaultValue={user.project_interest}
+              defaultValue={user?.project_interest}
               maxLength={2000}
               placeholder="A business website, a portfolio, a community project…"
             />
@@ -249,7 +294,13 @@ export function RegisterForm({
               </label>
               <label className="field">
                 <span>Guardian email (verified account)</span>
-                <input name="guardianEmail" type="email" value={user.email} readOnly required />
+                <input
+                  name="guardianEmail"
+                  type="email"
+                  defaultValue={user?.email}
+                  readOnly={!!user}
+                  required
+                />
               </label>
               <label className="field full">
                 <span>Guardian phone</span>
@@ -286,7 +337,7 @@ export function RegisterForm({
             , and understand the full program fee is {money(price.amount)}.
           </label>
           <label className="checkbox full">
-            <input name="updatesOptIn" type="checkbox" defaultChecked={!!user.updates_opt_in} />
+            <input name="updatesOptIn" type="checkbox" defaultChecked={!!user?.updates_opt_in} />
             Email me course announcements and schedule updates. I can opt out at any time. Account
             access and payment emails are still necessary to provide the service.
           </label>

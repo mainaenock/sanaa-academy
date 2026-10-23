@@ -63,7 +63,7 @@ export default async function Policy({ params }: { params: Promise<{ policy: str
               </p>
               <h2>Children and guardians</h2>
               <p>
-                A parent or guardian must use their own verified account email, provide contact
+                A parent or guardian must register with their own account email, provide contact
                 details and confirm their authority and consent before registering a child. The
                 guardian manages account access and payment. Contact us to withdraw consent or
                 correct guardian information. We may seek proportionate additional verification
@@ -91,15 +91,14 @@ export default async function Policy({ params }: { params: Promise<{ policy: str
               </p>
               <h2>Retention and deletion</h2>
               <p>
-                Login codes expire after 10 minutes and are single use. Learner sessions expire
-                after seven days, and admin sessions after twelve hours. Expired credentials and
-                temporary login emails are routinely purged. Incomplete registrations should be
-                reviewed after 30 days, and learning records after 12 months following the cohort.
-                Financial and audit records are retained only for the documented period required for
-                accounting, disputes, or legal obligations; the operator records the reason before
-                fulfilling or declining a deletion request. Account deletion removes contact,
-                guardian, session, progress, and submission data, and pseudonymizes retained
-                transaction records.
+                Passwords are stored as salted, one-way hashes. Learner sessions expire after seven
+                days, and admin sessions after twelve hours. Expired credentials and temporary login
+                emails are routinely purged. Incomplete registrations should be reviewed after 30
+                days, and learning records after 12 months following the cohort. Financial and audit
+                records are retained only for the documented period required for accounting,
+                disputes, or legal obligations; the operator records the reason before fulfilling or
+                declining a deletion request. Account deletion removes contact, guardian, session,
+                progress, and submission data, and pseudonymizes retained transaction records.
               </p>
               <h2>Security, cookies, and recordings</h2>
               <p>
@@ -172,7 +171,7 @@ export default async function Policy({ params }: { params: Promise<{ policy: str
             <>
               <h2>Requesting a refund</h2>
               <p>
-                Contact {contact} from your verified account email with your payment reference and a
+                Contact {contact} from your account email with your payment reference and a
                 brief explanation. Do not send card numbers, PINs, or M-PESA credentials. Requests
                 are reviewed individually under applicable consumer rights and the circumstances of
                 the service delivered. This policy does not promise an automatic refund or waive

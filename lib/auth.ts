@@ -3,7 +3,7 @@ import { all, first, statement, type AppEnv } from './db';
 import { digest, randomToken } from './crypto';
 import { emailSchema } from './domain';
 import { assert, botCheck, rateLimit } from './http';
-import { deliverEmail, emailTemplate, queueEmail } from './email';
+const passwordSchema = z.string().min(10).max(128);
 export interface User {
   id: string;
   email: string;
@@ -66,71 +66,44 @@ export async function requireEnrollment(e: AppEnv, userId: string) {
   assert(enrollment, 403, 'A verified active enrollment is required.');
   return enrollment;
 }
-export async function requestCode(request: Request, e: AppEnv, input: unknown) {
-  const data = z.object({ email: emailSchema, turnstileToken: z.string() }).parse(input);
-  await rateLimit(e, 'auth-ip:' + request.headers.get('cf-connecting-ip'), 12);
-  await rateLimit(e, 'auth-email:' + data.email, 4);
-  await botCheck(request, e, data.turnstileToken, 'login');
-  assert(e.RESEND_API_KEY && e.EMAIL_FROM, 503, 'Email sign-in is awaiting configuration.');
-  const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 100000000).padStart(8, '0');
-  const hash = await digest(data.email + ':' + code),
-    id = crypto.randomUUID(),
-    now = Math.floor(Date.now() / 1000);
-  await e.DB.batch([
-    statement(
-      e,
-      "UPDATE auth_tokens SET consumed_at=? WHERE email=? AND purpose='login' AND consumed_at IS NULL",
-      now,
-      data.email,
-    ),
-    statement(
-      e,
-      "INSERT INTO auth_tokens(token_hash,email,purpose,expires_at) VALUES(?,?,'login',?)",
-      hash,
-      data.email,
-      now + 600,
-    ),
-  ]);
-  await queueEmail(e, {
-    id,
-    key: id,
-    to: data.email,
-    subject: 'Your Sanaa Academy sign-in code',
-    kind: 'login',
-    html: emailTemplate(
-      'Your next chapter is waiting',
-      `<p>Your one-time sign-in code is:</p><p style="font-size:32px;letter-spacing:7px;font-weight:bold">${code}</p><p>This code expires in 10 minutes and works once. Do not share it. If you did not request it, you can ignore this email.</p>`,
-    ),
-  });
-  const sent = await deliverEmail(e, id);
-  assert(sent, 503, 'We could not deliver your code. Please try again later.');
-  return Response.json({ message: 'Check your email for an eight-digit code.' });
+async function passwordHash(password: string, salt = crypto.getRandomValues(new Uint8Array(16))) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits'],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 210_000 },
+    key,
+    256,
+  );
+  return `pbkdf2$210000$${Array.from(salt, (b) => b.toString(16).padStart(2, '0')).join('')}$${Array.from(new Uint8Array(bits), (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
-export async function verifyCode(request: Request, e: AppEnv, input: unknown) {
-  const data = z.object({ email: emailSchema, code: z.string().regex(/^\d{8}$/) }).parse(input);
-  await rateLimit(e, 'verify-ip:' + request.headers.get('cf-connecting-ip'), 20);
-  await rateLimit(e, 'verify-email:' + data.email, 8);
-  const hash = await digest(data.email + ':' + data.code),
-    now = Math.floor(Date.now() / 1000);
-  const consumed = await statement(
-    e,
-    "UPDATE auth_tokens SET consumed_at=? WHERE token_hash=? AND purpose='login' AND expires_at>? AND consumed_at IS NULL RETURNING email",
-    now,
-    hash,
-    now,
-  ).first<{ email: string }>();
-  assert(consumed, 400, 'This code is invalid, expired, or already used.');
-  await statement(
-    e,
-    'INSERT INTO users(id,email,verified_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(email) DO UPDATE SET verified_at=COALESCE(verified_at,CURRENT_TIMESTAMP)',
-    crypto.randomUUID(),
-    data.email,
-  ).run();
-  const user = await first<User>(e, 'SELECT * FROM users WHERE email=?', data.email);
-  assert(user, 500, 'Unable to create account');
+async function passwordMatches(password: string, encoded: string) {
+  const [algorithm, rounds, saltHex, expectedHex] = encoded.split('$');
+  if (
+    algorithm !== 'pbkdf2' ||
+    rounds !== '210000' ||
+    !/^[a-f0-9]{32}$/.test(saltHex ?? '') ||
+    !/^[a-f0-9]{64}$/.test(expectedHex ?? '')
+  )
+    return false;
+  const actual = await passwordHash(
+    password,
+    new Uint8Array(saltHex.match(/../g)!.map((b) => parseInt(b, 16))),
+  );
+  const expected = new TextEncoder().encode(expectedHex),
+    got = new TextEncoder().encode(actual.split('$')[3]);
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected[i] ^ got[i];
+  return diff === 0;
+}
+async function createSession(e: AppEnv, user: User, now = Math.floor(Date.now() / 1000)) {
   const token = randomToken(),
     csrf = randomToken(),
-    maxAge = user.role === 'admin' ? 43200 : 604800;
+    maxAge = user.role === 'admin' ? 43200 : 2592000;
   await statement(
     e,
     'INSERT INTO auth_sessions(token_hash,user_id,csrf_token,expires_at) VALUES(?,?,?,?)',
@@ -139,20 +112,51 @@ export async function verifyCode(request: Request, e: AppEnv, input: unknown) {
     csrf,
     now + maxAge,
   ).run();
-  // Do not retain expired credentials or emailed codes indefinitely.
-  await e.DB.batch([
-    statement(e, 'DELETE FROM auth_tokens WHERE expires_at<?', now - 86400),
-    statement(e, 'DELETE FROM auth_sessions WHERE expires_at<?', now),
-    statement(e, 'DELETE FROM rate_limits WHERE reset_at<?', now),
-    statement(
-      e,
-      "DELETE FROM email_outbox WHERE kind='login' AND created_at<datetime('now','-1 day')",
-    ),
-  ]);
   return Response.json(
-    { user: { id: user.id, email: user.email, role: user.role } },
+    { user: { id: user.id, email: user.email, role: user.role }, csrf },
     { headers: { 'Set-Cookie': sessionCookie(e, token, maxAge) } },
   );
+}
+export async function registerAccount(request: Request, e: AppEnv, input: unknown) {
+  const data = z.object({ email: emailSchema, password: passwordSchema }).parse(input);
+  await rateLimit(e, 'register-ip:' + request.headers.get('cf-connecting-ip'), 8);
+  await rateLimit(e, 'register-email:' + data.email, 4);
+  assert(
+    !(await first(e, 'SELECT id FROM users WHERE email=?', data.email)),
+    409,
+    'An account already exists for this email. Sign in to continue.',
+  );
+  const hash = await passwordHash(data.password),
+    id = crypto.randomUUID();
+  await statement(
+    e,
+    'INSERT INTO users(id,email,password_hash) VALUES(?,?,?)',
+    id,
+    data.email,
+    hash,
+  ).run();
+  const user = await first<User>(e, 'SELECT * FROM users WHERE id=?', id);
+  assert(user, 500, 'Unable to create account');
+  return createSession(e, user);
+}
+export async function loginPassword(request: Request, e: AppEnv, input: unknown) {
+  const data = z
+    .object({ email: emailSchema, password: passwordSchema, turnstileToken: z.string() })
+    .parse(input);
+  await rateLimit(e, 'password-login-ip:' + request.headers.get('cf-connecting-ip'), 12);
+  await rateLimit(e, 'password-login-email:' + data.email, 8);
+  await botCheck(request, e, data.turnstileToken, 'login');
+  const user = await first<User & { password_hash: string | null }>(
+    e,
+    'SELECT * FROM users WHERE email=?',
+    data.email,
+  );
+  assert(
+    user?.password_hash && (await passwordMatches(data.password, user.password_hash)),
+    401,
+    'Email or password is incorrect.',
+  );
+  return createSession(e, user);
 }
 export async function logout(request: Request, e: AppEnv) {
   const s = await requireSession(request, e);

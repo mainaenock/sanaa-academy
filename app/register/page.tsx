@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers';
 import { Header, Footer } from '@/components/public-shell';
 import { RegisterForm } from '@/components/register-form';
-import { LoginForm } from '@/components/login-form';
 import { runtime, course, site, first, providersReady } from '@/lib/db';
 import { sessionFromCookie } from '@/lib/auth';
 import { quote, registrationAvailable } from '@/lib/domain';
@@ -41,32 +40,24 @@ export default async function Register() {
             <div className="eyebrow">A SMALL STEP. A NEW POSSIBILITY.</div>
             <h1>Let’s make your idea real.</h1>
             <p>
-              First, verify your email. Then complete your enrollment and pay securely to join the
+              Create your student account, add your learner details, then pay securely to join the
               next Sanaa Academy cohort.
             </p>
           </div>
         </section>
         <section className="page-content">
           <div className="narrow">
-            {session ? (
-              <RegisterForm
-                user={session.user}
-                csrf={session.csrf}
-                siteKey={e.TURNSTILE_SITE_KEY ?? ''}
-                ready={providersReady(e)}
-                available={registrationAvailable(c)}
-                initialQuote={quote(c)}
-                course={c}
-                existing={existing}
-                guardian={guardian}
-              />
-            ) : (
-              <LoginForm
-                siteKey={e.TURNSTILE_SITE_KEY ?? ''}
-                ready={!!(e.RESEND_API_KEY && e.EMAIL_FROM && e.TURNSTILE_SECRET_KEY)}
-                next="/register"
-              />
-            )}
+            <RegisterForm
+              user={session?.user ?? null}
+              csrf={session?.csrf ?? ''}
+              siteKey={e.TURNSTILE_SITE_KEY ?? ''}
+              ready={providersReady(e)}
+              available={registrationAvailable(c)}
+              initialQuote={quote(c)}
+              course={c}
+              existing={existing}
+              guardian={guardian}
+            />
           </div>
         </section>
       </main>

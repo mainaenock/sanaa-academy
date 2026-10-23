@@ -102,8 +102,8 @@ export async function enroll(request: Request, e: AppEnv, input: unknown) {
       : data.learnerEmail === s.user.email,
     400,
     data.ageCategory === 'minor'
-      ? 'The guardian must sign in with their own verified email.'
-      : 'Use your verified account email as the learner email.',
+      ? 'The guardian account email must match the account used to register.'
+      : 'Use your account email as the learner email.',
   );
   const existing = await first<{ id: string; status: string }>(
     e,

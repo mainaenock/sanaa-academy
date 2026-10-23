@@ -6,7 +6,7 @@ The source brief is the goal-objective.md supplied on 17 October 2026. Brand spe
 
 - Next.js App Router API on vinext, React, TypeScript and Tailwind, running inside Cloudflare workerd.
 - D1 is the source of truth for users, sessions, enrollment, verified transactions, curriculum, progress, submissions, content and audit logs.
-- Passwordless one-time email verification, opaque hashed session cookies, strict origin checks, expiring tokens and persistent rate limits.
+- Salted PBKDF2 password authentication, opaque hashed session cookies, strict origin checks, expiring sessions and persistent rate limits.
 - Paystack hosted checkout; amount and KES currency checked against a stored server-side quote. Signed raw-body webhooks and server verification share atomic, idempotent settlement.
 - Resend HTTP delivery with a durable email outbox. Payment settlement never depends on email delivery. No fake production data or development authentication bypass.
 - Guardian consent collected for under-18 learners; payer can be a guardian. Public curriculum excludes private lesson content and meeting URLs.
@@ -25,8 +25,8 @@ Each phase is verified against type checking and build compatibility as implemen
 ## Delivered phase outcomes
 
 1. **Foundation:** official Cloudflare vinext App Router starter, TypeScript/Tailwind, generated binding types, responsive reusable public/private shells, theme tokens and route boundaries. The source uses the supported Wrangler setup selected by the official starter.
-2. **Public website:** a compact, server-rendered academy homepage with a hero, program choices/current curriculum, and time-aware pricing. Web development is available now; web apps/software and mobile apps are marked coming soon. Editable FAQs have their own `/faq` page. A Kenya-colored open-book/graduation-cap logo, SVG/PNG exports, updated sharing artwork, editable branding, registration and passwordless sign-in UI, guardian consent, responsive CSS, reduced-motion support, canonical/OG/Twitter metadata, Course structured data, policies, robots and sitemap are included. AI sparkle icons have been removed throughout the public site and student portal.
-3. **Data and enrollment:** D1 migrations/seed, one-time email codes, hashed expiring sessions, server-priced Paystack checkout, saved enrollment/payment recovery, API verification, signed/deduplicated webhooks, atomic settlement/outbox triggers, verified refund association and email failure recovery.
+2. **Public website:** a compact, server-rendered academy homepage with a hero, program choices/current curriculum, and time-aware pricing. Web development is available now; web apps/software and mobile apps are marked coming soon. Editable FAQs have their own `/faq` page. A Kenya-colored open-book/graduation-cap logo, SVG/PNG exports, updated sharing artwork, editable branding, student registration and password sign-in UI, guardian consent, responsive CSS, reduced-motion support, canonical/OG/Twitter metadata, Course structured data, policies, robots and sitemap are included. AI sparkle icons have been removed throughout the public site and student portal.
+3. **Data and enrollment:** D1 migrations/seed, salted password hashes, hashed expiring sessions, student registration, server-priced Paystack checkout, saved enrollment/payment recovery, API verification, signed/deduplicated webhooks, atomic settlement/outbox triggers, verified refund association and email failure recovery.
 4. **Learning portal:** authenticated enrollment gating, ordered modules/lessons, lesson completion, current-week calculations in the configured timezone, private live sessions, resource links, assignment submissions/feedback, profile changes, optional-email preferences, personal data export and deletion requests.
 5. **Administration and operations:** role checks, metrics from stored verified records, search/filter/CSV, learner/payment/progress review, curriculum/content CRUD, program/website configuration, session management, consent-aware announcements, recoverable email outbox, audited sensitive actions, privacy fulfillment, CI and deployment/account-activation documentation.
 
@@ -41,7 +41,7 @@ The revised source passed TypeScript checking and a production build. The local 
 ### Initial application verification
 
 - Type checking and lint passed on the final application source.
-- **27 automated tests passed** in workerd with real isolated D1. Coverage includes validation, Nairobi early-bird expiry and currency subunits, signature integrity, duplicate callbacks, successful/failed settlement, refunds by numeric provider ID, enrollment gating, ownership, CSRF/origin rejection, module CRUD/auditing, submissions, single-use email codes, full registration-to-portal behavior, bot action validation, configured-timezone week boundaries and announcement opt-out suppression.
+- **27 automated tests passed** in workerd with real isolated D1 at the time of initial verification. That historical suite covered validation, pricing, settlement, enrollment gating, ownership, CSRF/origin rejection, submissions, email-code authentication and payment-to-portal behavior; password authentication was added afterward.
 - Both SQL migrations applied successfully to local D1. Seeds contain only course configuration/content and official learning links.
 - Production builds and Cloudflare deployment dry runs passed. Build output includes the Worker, SSR/client bundles and D1 binding. Nonfatal upstream sourcemap/deprecation and route-classification messages remain; they do not constitute deployment.
 - HTTP verification of the development Worker confirmed the rendered homepage, expected KES 8,000 public quote, provider readiness false without credentials, CSP and no-store headers.

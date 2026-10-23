@@ -65,8 +65,8 @@ If initialization times out, preserve and reconcile its saved reference before t
 ### Email
 
 1. Add and verify the sending domain in Resend. Apply the exact DNS records it supplies (including DKIM and any SPF/bounce records) and configure DMARC appropriately for your domain.
-2. Choose the verified `EMAIL_FROM`. Test delivery to real controlled inboxes, including spam placement.
-3. Login uses an eight-digit, single-use code valid for 10 minutes. No permanent password is generated.
+2. Choose the verified `EMAIL_FROM`. Test delivery to real controlled inboxes, including spam placement. Email is used for welcome/receipt and optional announcement messages, not sign-in codes.
+3. Learners create an account with an email and password, complete their student profile, and pay through Paystack. Portal access is enabled only after payment verification. Returning learners use the same email and password.
 4. Welcome/receipt emails use the durable outbox. Failed sends preserve enrollment. Retry from `/admin/emails`; students can request a fresh confirmation on `/payment` up to three times per day.
 5. Announcement emails only target active, opted-in accounts. The admin explicitly queues batches of up to 20 and delivers up to three per action. Remaining messages stay in the outbox for operator delivery; this bounded approach avoids silently timing out bulk sends. Repeated queue actions deduplicate by announcement and user. Publish portal announcements for all enrolled students, including those who opt out of email.
 6. Configure bounce/complaint handling in the provider account and suppress affected recipients. Account and payment emails are transactional; optional announcements include an unsubscribe link.

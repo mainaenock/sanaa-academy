@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { adminDelete, adminRead, adminWrite, exportStudents } from './admin';
-import { logout, requireEnrollment, requireSession, requestCode, verifyCode } from './auth';
+import { logout, loginPassword, registerAccount, requireEnrollment, requireSession } from './auth';
 import { course, first, providersReady, site, statement, type AppEnv } from './db';
 import { assert, errorResponse, jsonBody, rateLimit, sameOrigin, HttpError } from './http';
 import {
@@ -32,10 +32,10 @@ export async function handleApi(request: Request, e: AppEnv): Promise<Response> 
         turnstileSiteKey: e.TURNSTILE_SITE_KEY ?? '',
       });
     }
-    if (path === 'auth/request' && request.method === 'POST')
-      return await requestCode(request, e, await jsonBody(request));
-    if (path === 'auth/verify' && request.method === 'POST')
-      return await verifyCode(request, e, await jsonBody(request));
+    if (path === 'auth/register' && request.method === 'POST')
+      return await registerAccount(request, e, await jsonBody(request));
+    if (path === 'auth/login' && request.method === 'POST')
+      return await loginPassword(request, e, await jsonBody(request));
     if (path === 'auth/logout' && request.method === 'POST') return await logout(request, e);
     if (path === 'unsubscribe' && request.method === 'POST') {
       const v = z
