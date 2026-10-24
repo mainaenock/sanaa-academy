@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { adminDelete, adminRead, adminWrite, exportStudents } from './admin';
 import { logout, loginPassword, requireEnrollment, requireSession } from './auth';
-import { course, first, providersReady, site, statement, type AppEnv } from './db';
+import { course, first, checkoutReady, site, statement, type AppEnv } from './db';
 import { assert, errorResponse, jsonBody, rateLimit, sameOrigin, HttpError } from './http';
 import {
   enroll,
@@ -28,7 +28,7 @@ export async function handleApi(request: Request, e: AppEnv): Promise<Response> 
         site: await site(e),
         quote: quote(c),
         registrationAvailable: registrationAvailable(c),
-        ready: providersReady(e),
+        ready: checkoutReady(e),
         turnstileSiteKey: e.TURNSTILE_SITE_KEY ?? '',
       });
     }

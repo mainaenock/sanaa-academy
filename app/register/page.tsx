@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { Header, Footer } from '@/components/public-shell';
 import { RegisterForm } from '@/components/register-form';
-import { runtime, course, site, first, providersReady } from '@/lib/db';
+import { runtime, course, site, first, checkoutReady } from '@/lib/db';
 import { sessionFromCookie } from '@/lib/auth';
 import { quote, registrationAvailable } from '@/lib/domain';
 export const metadata = {
@@ -51,7 +51,7 @@ export default async function Register() {
               user={session?.user ?? null}
               csrf={session?.csrf ?? ''}
               siteKey={e.TURNSTILE_SITE_KEY ?? ''}
-              ready={providersReady(e)}
+              ready={checkoutReady(e)}
               available={registrationAvailable(c)}
               initialQuote={quote(c)}
               course={c}

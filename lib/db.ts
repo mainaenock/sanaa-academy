@@ -27,11 +27,11 @@ export async function site(e: AppEnv): Promise<SiteContent> {
   );
   return row ? { ...defaultSite, ...JSON.parse(row.value) } : defaultSite;
 }
-export function providersReady(e: AppEnv) {
+export function checkoutReady(e: AppEnv) {
+  const mode = e.PAYSTACK_MODE === 'live' ? 'live' : 'test';
   return !!(
-    e.PAYSTACK_SECRET_KEY &&
-    e.RESEND_API_KEY &&
-    e.EMAIL_FROM &&
+    e.PAYSTACK_SECRET_KEY?.startsWith(`sk_${mode}_`) &&
+    !(e.APP_ENV === 'production' && mode !== 'live') &&
     e.TURNSTILE_SITE_KEY &&
     e.TURNSTILE_SECRET_KEY &&
     e.APP_URL

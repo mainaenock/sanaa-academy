@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { all, course, first, providersReady, statement, type AppEnv } from './db';
+import { all, course, first, checkoutReady, statement, type AppEnv } from './db';
 import { passwordHash, passwordMatches, sessionFromCookie, type User } from './auth';
 import { assert, botCheck, HttpError, rateLimit } from './http';
 import {
@@ -91,7 +91,7 @@ export async function enroll(request: Request, e: AppEnv, input: unknown) {
       password: z.string().min(10).max(128).optional(),
     })
     .parse(input);
-  assert(providersReady(e), 503, 'Checkout is awaiting configuration.');
+  assert(checkoutReady(e), 503, 'Checkout is awaiting configuration.');
   await rateLimit(
     e,
     'register:' + (session?.user.id ?? request.headers.get('cf-connecting-ip') ?? 'unknown'),

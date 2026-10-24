@@ -14,7 +14,7 @@ Copy-Item .dev.vars.example .dev.vars
 npm run dev -- --port 5173
 ```
 
-Open `http://localhost:5173`. The public site and curriculum work after migrations. Configure the ignored `.dev.vars` for real sign-in and checkout. Without providers, forms fail safely and do not fabricate payments or enrollments. There is no demo login or authentication bypass.
+Open `http://localhost:5173`. The public site and curriculum work after migrations. Configure the ignored `.dev.vars` for real sign-in and checkout. Paystack and Turnstile are required for checkout; Turnstile is required for sign-in. Resend is optional and only handles email delivery. Without the required providers, forms fail safely and do not fabricate payments or enrollments. There is no demo login or authentication bypass.
 
 To preview the actual production bundle locally, stop the development server, run `npm run build`, then `npm start`. The launcher uses port 5173 by default and an absolute path to the same migrated `.wrangler/state` store. Use the exact `APP_URL` origin (`http://localhost:5173` by default) in your browser so mutation Origin checks match. `npm start -- --port 8787` can override the port; update your local `APP_URL` accordingly before testing forms. To run the read-only HTTP smoke suite against a running bundle, use `npm run smoke -- http://localhost:5173`.
 
@@ -31,13 +31,13 @@ The standard Cloudflare tools use a profile registry/log directory. In a restric
 | `APP_ENV`              | Wrangler vars                         | `development` locally, `production` on the live Worker                               |
 | `PAYSTACK_MODE`        | Wrangler vars                         | `test` or `live`; must match secret key prefix                                       |
 | `PAYSTACK_SECRET_KEY`  | Worker secret                         | Paystack secret; never a public client variable                                      |
-| `RESEND_API_KEY`       | Worker secret                         | Key authorized to send from the verified sender                                      |
-| `EMAIL_FROM`           | Worker secret                         | Verified sender address or `Academy Name <address>`                                  |
+| `RESEND_API_KEY`       | Worker secret                         | Optional for checkout; required to deliver welcome and announcement emails          |
+| `EMAIL_FROM`           | Worker secret                         | Optional for checkout; required with `RESEND_API_KEY` for outbound email             |
 | `TURNSTILE_SITE_KEY`   | Worker secret or public configuration | Widget site key, returned publicly to render the widget                              |
 | `TURNSTILE_SECRET_KEY` | Worker secret                         | Server-side Siteverify credential                                                    |
 | `TURNSTILE_HOSTNAMES`  | Wrangler vars                         | Comma-separated exact frontend hostnames; no scheme/port; no localhost in production |
 
-No secrets have been supplied or committed. `.dev.vars` and environment files are ignored. Never paste secrets into browser forms, prompts, source control, CI logs, or command-line arguments. Set production secrets with interactive standard input:
+Paystack and Turnstile secrets plus `APP_URL` are required for enrollment and checkout. Resend and `EMAIL_FROM` are optional for checkout, but should be configured to deliver welcome and announcement emails. No secrets have been supplied or committed. `.dev.vars` and environment files are ignored. Never paste secrets into browser forms, prompts, source control, CI logs, or command-line arguments. Set production secrets with interactive standard input:
 
 ```powershell
 npx wrangler secret put PAYSTACK_SECRET_KEY
@@ -99,6 +99,8 @@ The curriculum seed contains six weeks, six modules, twelve lessons, twelve prac
 ## 4. Build and deploy
 
 Set the source Wrangler vars to your actual HTTPS origin, `APP_ENV=production`, `PAYSTACK_MODE=live`, and exact production Turnstile hostnames. Check that the provider secrets are present on the intended Worker. Set your support contact, instructor, policies, class timetable and registration availability in admin. Configure provider accounts before inviting payment.
+
+The deploy command does not apply D1 migrations. Before deploying code that depends on a migration, check `wrangler d1 migrations list sanaa-academy --remote`, run `npm run db:migrate:remote` when migrations are pending, and confirm the list is clear.
 
 ```powershell
 npm run types

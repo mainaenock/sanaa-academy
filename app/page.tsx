@@ -17,7 +17,7 @@ import {
 import { Header, Footer } from '@/components/public-shell';
 import { Countdown } from '@/components/countdown';
 import { LearningHeadline } from '@/components/learning-headline';
-import { runtime, course, site, all, providersReady } from '@/lib/db';
+import { runtime, course, site, all, checkoutReady } from '@/lib/db';
 import { quote, money } from '@/lib/domain';
 import { defaultSite, weekSummaries } from '@/lib/defaults';
 import './home.css';
@@ -53,7 +53,7 @@ export default async function Home() {
     ),
   ]);
   const price = quote(c),
-    ready = providersReady(e);
+    ready = checkoutReady(e);
   const date = (d: string) =>
     new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', {
       day: 'numeric',
