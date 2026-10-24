@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { all, course, first, providersReady, statement, type AppEnv } from './db';
-import { requireSession, type User } from './auth';
+import { passwordHash, passwordMatches, sessionFromCookie, type User } from './auth';
 import { assert, botCheck, HttpError, rateLimit } from './http';
 import {
   COURSE_ID,
+  emailSchema,
   POLICY_VERSION,
   paymentMatches,
   quote,
@@ -80,14 +81,83 @@ async function paystack(e: AppEnv, path: string, body?: unknown) {
   return result.data;
 }
 export async function enroll(request: Request, e: AppEnv, input: unknown) {
-  const s = await requireSession(request, e);
+  const session = await sessionFromCookie(e, request.headers.get('cookie'));
   const data = registrationSchema.parse(input);
   const raw = z
-    .object({ turnstileToken: z.string(), expectedAmount: z.number().int() })
+    .object({
+      turnstileToken: z.string(),
+      expectedAmount: z.number().int(),
+      accountEmail: z.string().optional(),
+      password: z.string().min(10).max(128).optional(),
+    })
     .parse(input);
   assert(providersReady(e), 503, 'Checkout is awaiting configuration.');
-  await rateLimit(e, 'register:' + s.user.id, 8);
+  await rateLimit(
+    e,
+    'register:' + (session?.user.id ?? request.headers.get('cf-connecting-ip') ?? 'unknown'),
+    8,
+  );
   await botCheck(request, e, raw.turnstileToken, 'register');
+  let user: User | null | undefined = session?.user;
+  if (!user) {
+    const account = z
+      .object({ email: emailSchema, password: z.string().min(10).max(128) })
+      .parse({ email: raw.accountEmail, password: raw.password });
+    const matchesEmail = data.ageCategory === 'minor'
+      ? data.guardianEmail === account.email
+      : data.learnerEmail === account.email;
+    assert(
+      matchesEmail,
+      400,
+      data.ageCategory === 'minor'
+        ? 'The guardian email must match the account email.'
+        : 'Use the account email as the learner email.',
+    );
+    const existingUser = await first<User & { password_hash: string | null }>(
+      e,
+      'SELECT * FROM users WHERE email=?',
+      account.email,
+    );
+    if (existingUser) {
+      assert(!existingUser.password_hash, 409, 'An account already exists for this email. Sign in to continue.');
+      const savedSecret = await first<{ password_hash: string }>(
+        e,
+        'SELECT password_hash FROM registration_secrets WHERE user_id=?',
+        existingUser.id,
+      );
+      assert(
+        savedSecret && (await passwordMatches(account.password, savedSecret.password_hash)),
+        409,
+        'A registration is already in progress for this email. Use the password you first entered.',
+      );
+      user = existingUser;
+    } else {
+      const id = crypto.randomUUID();
+      await e.DB.batch([
+        statement(
+          e,
+          'INSERT INTO users(id,email,name,phone,age_category,experience,project_interest,updates_opt_in) VALUES(?,?,?,?,?,?,?,?)',
+          id,
+          account.email,
+          data.name,
+          data.phone,
+          data.ageCategory,
+          data.experience,
+          data.projectInterest,
+          Number(data.updatesOptIn),
+        ),
+        statement(
+          e,
+          'INSERT INTO registration_secrets(user_id,password_hash) VALUES(?,?)',
+          id,
+          await passwordHash(account.password),
+        ),
+      ]);
+      user = await first<User>(e, 'SELECT * FROM users WHERE id=?', id);
+      assert(user, 500, 'Unable to prepare registration.');
+    }
+  }
+  assert(user, 401, 'Please sign in to continue.');
   const c = await course(e);
   assert(registrationAvailable(c), 409, 'Registration is currently closed.');
   const price = quote(c);
@@ -98,8 +168,8 @@ export async function enroll(request: Request, e: AppEnv, input: unknown) {
   );
   assert(
     data.ageCategory === 'minor'
-      ? data.guardianEmail === s.user.email
-      : data.learnerEmail === s.user.email,
+      ? data.guardianEmail === user.email
+      : data.learnerEmail === user.email,
     400,
     data.ageCategory === 'minor'
       ? 'The guardian account email must match the account used to register.'
@@ -108,7 +178,7 @@ export async function enroll(request: Request, e: AppEnv, input: unknown) {
   const existing = await first<{ id: string; status: string }>(
     e,
     'SELECT id,status FROM enrollments WHERE user_id=? AND course_id=?',
-    s.user.id,
+    user.id,
     COURSE_ID,
   );
   assert(
@@ -124,7 +194,7 @@ export async function enroll(request: Request, e: AppEnv, input: unknown) {
     e,
     `INSERT OR IGNORE INTO enrollments(id,user_id,course_id,terms_version) SELECT ?,?,?,? WHERE (SELECT capacity FROM courses WHERE id=?) IS NULL OR (SELECT COUNT(*) FROM enrollments WHERE course_id=? AND status IN ('active','pending'))<(SELECT capacity FROM courses WHERE id=?)`,
     id,
-    s.user.id,
+    user.id,
     COURSE_ID,
     POLICY_VERSION,
     COURSE_ID,
@@ -135,7 +205,7 @@ export async function enroll(request: Request, e: AppEnv, input: unknown) {
   const reserved = await first<{ id: string }>(
     e,
     "SELECT id FROM enrollments WHERE user_id=? AND course_id=? AND status='pending'",
-    s.user.id,
+    user.id,
     COURSE_ID,
   );
   assert(reserved, 409, 'This cohort is currently full.');
@@ -149,24 +219,24 @@ export async function enroll(request: Request, e: AppEnv, input: unknown) {
       data.experience,
       data.projectInterest,
       Number(data.updatesOptIn),
-      s.user.id,
+      user.id,
     ),
     ...(data.ageCategory === 'minor'
       ? [
           statement(
             e,
             'INSERT INTO guardians(user_id,name,email,phone,learner_email,consent_at,consent_version,verified_at) VALUES(?,?,?,?,?,CURRENT_TIMESTAMP,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET name=excluded.name,email=excluded.email,phone=excluded.phone,learner_email=excluded.learner_email,consent_at=excluded.consent_at,consent_version=excluded.consent_version,verified_at=excluded.verified_at',
-            s.user.id,
+            user.id,
             data.guardianName,
-            s.user.email,
+            user.email,
             data.guardianPhone,
             data.learnerEmail,
             POLICY_VERSION,
           ),
         ]
-      : [statement(e, 'DELETE FROM guardians WHERE user_id=?', s.user.id)]),
+      : [statement(e, 'DELETE FROM guardians WHERE user_id=?', user.id)]),
   ]);
-  return initialize(e, s.user, reserved.id, raw.expectedAmount);
+  return initialize(e, user, reserved.id, raw.expectedAmount);
 }
 export async function initialize(
   e: AppEnv,
@@ -285,14 +355,35 @@ export async function settle(e: AppEnv, data: VerifiedPayment) {
   assert(paymentMatches(tx, data), 400, 'Payment details do not match this enrollment.');
   if (['refunded', 'reversed'].includes(tx.status))
     return { status: tx.status, reference: tx.reference };
-  await statement(
+  const pendingSecret = await first<{ user_id: string; password_hash: string }>(
     e,
-    "UPDATE transactions SET status='success',provider_id=?,method=?,verified_at=CURRENT_TIMESTAMP,paid_at=? WHERE reference=? AND status NOT IN ('success','refunded','reversed')",
-    String(data.id),
-    data.channel ?? null,
-    data.paid_at ?? new Date().toISOString(),
-    tx.reference,
-  ).run();
+    'SELECT rs.user_id,rs.password_hash FROM registration_secrets rs JOIN enrollments en ON en.user_id=rs.user_id WHERE en.id=?',
+    tx.enrollment_id,
+  );
+  const statements = [];
+  if (pendingSecret) {
+    statements.push(
+      statement(
+        e,
+        'UPDATE users SET password_hash=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND password_hash IS NULL',
+        pendingSecret.password_hash,
+        pendingSecret.user_id,
+      ),
+      statement(e, 'DELETE FROM registration_secrets WHERE user_id=?', pendingSecret.user_id),
+    );
+  }
+  statements.push(
+    statement(
+      e,
+      "UPDATE transactions SET status='success',provider_id=?,method=?,verified_at=CURRENT_TIMESTAMP,paid_at=? WHERE reference=? AND status NOT IN ('success','refunded','reversed')",
+      String(data.id),
+      data.channel ?? null,
+      data.paid_at ?? new Date().toISOString(),
+      tx.reference,
+    ),
+  );
+  // D1 commits the account credential, secret removal, and payment activation together.
+  await e.DB.batch(statements);
   // Failure is recorded for retry; it cannot affect settlement.
   if (e.RESEND_API_KEY && e.EMAIL_FROM) await deliverEmail(e, 'welcome-' + tx.enrollment_id);
   return { status: 'success', reference: tx.reference };

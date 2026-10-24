@@ -40,8 +40,8 @@ export default async function Register() {
             <div className="eyebrow">A SMALL STEP. A NEW POSSIBILITY.</div>
             <h1>Let’s make your idea real.</h1>
             <p>
-              Create your student account, add your learner details, then pay securely to join the
-              next Sanaa Academy cohort.
+              Add your learner details, choose card or M-PESA at secure checkout, and pay to join
+              the next Sanaa Academy cohort. Your account activates after payment is confirmed.
             </p>
           </div>
         </section>

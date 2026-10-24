@@ -66,7 +66,7 @@ export async function requireEnrollment(e: AppEnv, userId: string) {
   assert(enrollment, 403, 'A verified active enrollment is required.');
   return enrollment;
 }
-async function passwordHash(password: string, salt = crypto.getRandomValues(new Uint8Array(16))) {
+export async function passwordHash(password: string, salt = crypto.getRandomValues(new Uint8Array(16))) {
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(password),
@@ -81,7 +81,7 @@ async function passwordHash(password: string, salt = crypto.getRandomValues(new 
   );
   return `pbkdf2$210000$${Array.from(salt, (b) => b.toString(16).padStart(2, '0')).join('')}$${Array.from(new Uint8Array(bits), (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
-async function passwordMatches(password: string, encoded: string) {
+export async function passwordMatches(password: string, encoded: string) {
   const [algorithm, rounds, saltHex, expectedHex] = encoded.split('$');
   if (
     algorithm !== 'pbkdf2' ||

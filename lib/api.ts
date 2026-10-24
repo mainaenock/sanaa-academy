@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { adminDelete, adminRead, adminWrite, exportStudents } from './admin';
-import { logout, loginPassword, registerAccount, requireEnrollment, requireSession } from './auth';
+import { logout, loginPassword, requireEnrollment, requireSession } from './auth';
 import { course, first, providersReady, site, statement, type AppEnv } from './db';
 import { assert, errorResponse, jsonBody, rateLimit, sameOrigin, HttpError } from './http';
 import {
@@ -32,8 +32,6 @@ export async function handleApi(request: Request, e: AppEnv): Promise<Response> 
         turnstileSiteKey: e.TURNSTILE_SITE_KEY ?? '',
       });
     }
-    if (path === 'auth/register' && request.method === 'POST')
-      return await registerAccount(request, e, await jsonBody(request));
     if (path === 'auth/login' && request.method === 'POST')
       return await loginPassword(request, e, await jsonBody(request));
     if (path === 'auth/logout' && request.method === 'POST') return await logout(request, e);
@@ -55,6 +53,11 @@ export async function handleApi(request: Request, e: AppEnv): Promise<Response> 
       );
       await statement(e, 'UPDATE users SET updates_opt_in=0 WHERE email=?', row.email).run();
       return Response.json({ message: 'You have unsubscribed from course update emails.' });
+    }
+    if (path === 'payments/verify-public' && request.method === 'POST') {
+      const v = z.object({ reference: z.string() }).parse(await jsonBody(request));
+      await rateLimit(e, 'public-payment-verify:' + request.headers.get('cf-connecting-ip'), 30);
+      return Response.json(await verifyPayment(e, v.reference));
     }
     const s = await requireSession(request, e, path.startsWith('admin/'));
     if (path === 'me' && request.method === 'GET')

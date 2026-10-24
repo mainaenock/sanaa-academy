@@ -51,20 +51,13 @@ export function RegisterForm({
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const v = formValues(event.currentTarget);
-    let requestCsrf = csrf;
     setBusy(true);
     setError('');
     try {
-      if (!user) {
-        const account = await api<{ csrf: string }>('auth/register', {
-          email: v.accountEmail,
-          password: v.password,
-        });
-        requestCsrf = account.csrf;
-      }
       const result = await api<{ url: string }>(
         'enroll',
         {
+          ...(!user ? { accountEmail: v.accountEmail, password: v.password } : {}),
           name: v.name,
           learnerEmail: v.learnerEmail,
           phone: v.phone,
@@ -80,7 +73,7 @@ export function RegisterForm({
           turnstileToken: token,
           expectedAmount: price.amount,
         },
-        requestCsrf,
+        csrf,
       );
       window.location.assign(result.url);
     } catch (error) {
@@ -180,8 +173,8 @@ export function RegisterForm({
       <form className="card" onSubmit={submit}>
         <h2>Tell us a little about the learner.</h2>
         <p className="tiny">
-          Your details are saved to your account. Portal access starts after Paystack confirms
-          payment.
+          Your details are used to prepare checkout. Your account is activated after Paystack
+          confirms payment.
         </p>
         <div className="form-grid">
           {!user && (
@@ -345,12 +338,13 @@ export function RegisterForm({
         <Turnstile siteKey={siteKey} action="register" onToken={setToken} nonce={nonce} />
         <div className="form-actions">
           <button className="btn" disabled={busy || !ready || !isAvailable || !token}>
-            {busy ? 'Preparing your secure checkout…' : `Continue to pay ${money(price.amount)}`}
+          {busy ? 'Preparing your secure checkout…' : `Choose payment method · ${money(price.amount)}`}
             <ArrowUpRight size={16} />
           </button>
         </div>
         <p className="tiny" style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-          <ShieldCheck size={14} /> Paystack handles your M-PESA or card details securely.
+          <ShieldCheck size={14} /> On Paystack, choose card or M-PESA. For M-PESA, enter your
+          number and approve the prompt on your phone.
         </p>
       </form>
     </div>
