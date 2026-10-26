@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { env } from 'cloudflare:test';
 import { handleApi } from '../lib/api';
+import { passwordHash } from '../lib/auth';
 import { digest, randomToken } from '../lib/crypto';
 import { first, statement, type AppEnv } from '../lib/db';
 import { settle } from '../lib/payments';
@@ -414,20 +415,36 @@ describe('signed webhook delivery', () => {
   });
 });
 describe('authentication and complete enrollment flow', () => {
-  it('consumes a passwordless code once and creates an HttpOnly session', async () => {
-    const email = crypto.randomUUID() + '@example.test',
-      code = '72519384';
+  it('signs in with a password and creates an HttpOnly session', async () => {
+    const user = await account(),
+      password = 'test-password-123';
     await statement(
       e,
-      "INSERT INTO auth_tokens(token_hash,email,purpose,expires_at) VALUES(?,?,'login',?)",
-      await digest(email + ':' + code),
-      email,
-      Math.floor(Date.now() / 1000) + 600,
+      'UPDATE users SET password_hash=? WHERE id=?',
+      await passwordHash(password),
+      user.id,
     ).run();
-    const result = await handleApi(request('auth/verify', { email, code }), e);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      Response.json({ success: true, hostname: 'localhost', action: 'login' }),
+    );
+    const result = await handleApi(
+      request('auth/login', { email: user.email, password, turnstileToken: 'test-token' }),
+      { ...e, TURNSTILE_SECRET_KEY: 'test' },
+    );
     expect(result.status).toBe(200);
     expect(result.headers.get('set-cookie')).toContain('HttpOnly');
-    expect((await handleApi(request('auth/verify', { email, code }), e)).status).toBe(400);
+    expect(
+      (
+        await handleApi(
+          request('auth/login', {
+            email: user.email,
+            password: 'incorrect-password',
+            turnstileToken: 'test-token',
+          }),
+          { ...e, TURNSTILE_SECRET_KEY: 'test' },
+        )
+      ).status,
+    ).toBe(401);
   });
   it('initializes a server-priced checkout, confirms payment and grants private lessons', async () => {
     const user = await account(),
@@ -551,7 +568,11 @@ describe('authentication and complete enrollment flow', () => {
       Response.json({ success: true, hostname: 'localhost', action: 'wrong' }),
     );
     const result = await handleApi(
-      request('auth/request', { email: user.email, turnstileToken: 'test' }),
+      request('auth/login', {
+        email: user.email,
+        password: 'test-password-123',
+        turnstileToken: 'test',
+      }),
       { ...e, TURNSTILE_SECRET_KEY: 'test' },
     );
     expect(result.status).toBe(403);
