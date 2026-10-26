@@ -446,6 +446,143 @@ describe('authentication and complete enrollment flow', () => {
       ).status,
     ).toBe(401);
   });
+  it('registers a guest, starts checkout, activates the account, and allows sign-in', async () => {
+    const email = crypto.randomUUID() + '@example.test',
+      password = 'new-learner-password-123',
+      amount = quote(defaultCourse).amount,
+      configured = {
+        ...e,
+        APP_ENV: 'development',
+        APP_URL: 'http://localhost:5173',
+        PAYSTACK_MODE: 'test',
+        PAYSTACK_SECRET_KEY: 'sk_test_example',
+        TURNSTILE_SITE_KEY: 'test-only',
+        TURNSTILE_SECRET_KEY: 'test-only',
+        TURNSTILE_HOSTNAMES: 'localhost',
+      };
+    let reference = '',
+      enrollmentId = '';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes('siteverify')) {
+        const token = new URLSearchParams(String(init?.body)).get('response');
+        return Response.json({
+          success: true,
+          hostname: 'localhost',
+          action: token === 'login-token' ? 'login' : 'register',
+        });
+      }
+      if (url.endsWith('/transaction/initialize')) {
+        const body = JSON.parse(String(init?.body));
+        reference = body.reference;
+        enrollmentId = JSON.parse(body.metadata).enrollment_id;
+        expect(body.email).toBe(email);
+        expect(body.amount).toBe(String(amount));
+        return Response.json({
+          status: true,
+          data: { reference, authorization_url: 'https://checkout.paystack.com/new-learner' },
+        });
+      }
+      if (url.includes('/transaction/verify/'))
+        return Response.json({
+          status: true,
+          data: {
+            id: crypto.randomUUID(),
+            reference,
+            amount,
+            currency: 'KES',
+            status: 'success',
+            domain: 'test',
+            metadata: JSON.stringify({ enrollment_id: enrollmentId }),
+          },
+        });
+      throw new Error('Unexpected provider request: ' + url);
+    });
+
+    const form = {
+      accountEmail: email,
+      password,
+      name: 'New learner',
+      learnerEmail: email,
+      phone: '+254700000000',
+      ageCategory: 'adult',
+      experience: '',
+      projectInterest: '',
+      guardianName: '',
+      guardianEmail: email,
+      guardianPhone: '',
+      guardianConsent: false,
+      terms: true,
+      updatesOptIn: false,
+      turnstileToken: 'register-token',
+      expectedAmount: amount,
+    };
+    const initialized = await handleApi(request('enroll', form), configured);
+    expect(initialized.status).toBe(200);
+    expect(((await initialized.json()) as { url: string }).url).toBe(
+      'https://checkout.paystack.com/new-learner',
+    );
+
+    const user = await first<{ id: string; password_hash: string | null }>(
+      e,
+      'SELECT id,password_hash FROM users WHERE email=?',
+      email,
+    );
+    expect(user?.password_hash).toBeNull();
+    expect(
+      await first<{ password_hash: string }>(
+        e,
+        'SELECT password_hash FROM registration_secrets WHERE user_id=?',
+        user!.id,
+      ),
+    ).toBeTruthy();
+    expect(
+      (
+        await first<{ status: string }>(
+          e,
+          'SELECT status FROM enrollments WHERE id=?',
+          enrollmentId,
+        )
+      )?.status,
+    ).toBe('pending');
+
+    const confirmed = await handleApi(request('payments/verify-public', { reference }), configured);
+    expect(confirmed.status).toBe(200);
+    expect(((await confirmed.json()) as { status: string }).status).toBe('success');
+    expect(
+      (
+        await first<{ status: string }>(
+          e,
+          'SELECT status FROM enrollments WHERE id=?',
+          enrollmentId,
+        )
+      )?.status,
+    ).toBe('active');
+    expect(
+      (
+        await first<{ password_hash: string }>(
+          e,
+          'SELECT password_hash FROM users WHERE id=?',
+          user!.id,
+        )
+      )?.password_hash,
+    ).toMatch(/^pbkdf2\$/);
+    expect(
+      await first(e, 'SELECT user_id FROM registration_secrets WHERE user_id=?', user!.id),
+    ).toBeNull();
+
+    const login = await handleApi(
+      request('auth/login', { email, password, turnstileToken: 'login-token' }),
+      configured,
+    );
+    expect(login.status).toBe(200);
+    expect(login.headers.get('set-cookie')).toContain('HttpOnly');
+
+    const existing = await account(),
+      noCsrf = request('enroll', {}, existing);
+    noCsrf.headers.delete('x-csrf-token');
+    expect((await handleApi(noCsrf, configured)).status).toBe(403);
+  });
   it('initializes a server-priced checkout, confirms payment and grants private lessons', async () => {
     const user = await account(),
       amount = quote(defaultCourse).amount;

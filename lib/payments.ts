@@ -82,6 +82,12 @@ async function paystack(e: AppEnv, path: string, body?: unknown) {
 }
 export async function enroll(request: Request, e: AppEnv, input: unknown) {
   const session = await sessionFromCookie(e, request.headers.get('cookie'));
+  if (session)
+    assert(
+      request.headers.get('x-csrf-token') === session.csrf,
+      403,
+      'Your form has expired. Refresh and try again.',
+    );
   const data = registrationSchema.parse(input);
   const raw = z
     .object({
@@ -103,9 +109,10 @@ export async function enroll(request: Request, e: AppEnv, input: unknown) {
     const account = z
       .object({ email: emailSchema, password: z.string().min(10).max(128) })
       .parse({ email: raw.accountEmail, password: raw.password });
-    const matchesEmail = data.ageCategory === 'minor'
-      ? data.guardianEmail === account.email
-      : data.learnerEmail === account.email;
+    const matchesEmail =
+      data.ageCategory === 'minor'
+        ? data.guardianEmail === account.email
+        : data.learnerEmail === account.email;
     assert(
       matchesEmail,
       400,
@@ -119,7 +126,11 @@ export async function enroll(request: Request, e: AppEnv, input: unknown) {
       account.email,
     );
     if (existingUser) {
-      assert(!existingUser.password_hash, 409, 'An account already exists for this email. Sign in to continue.');
+      assert(
+        !existingUser.password_hash,
+        409,
+        'An account already exists for this email. Sign in to continue.',
+      );
       const savedSecret = await first<{ password_hash: string }>(
         e,
         'SELECT password_hash FROM registration_secrets WHERE user_id=?',

@@ -59,6 +59,8 @@ export async function handleApi(request: Request, e: AppEnv): Promise<Response> 
       await rateLimit(e, 'public-payment-verify:' + request.headers.get('cf-connecting-ip'), 30);
       return Response.json(await verifyPayment(e, v.reference));
     }
+    if (path === 'enroll' && request.method === 'POST')
+      return await enroll(request, e, await jsonBody(request));
     const s = await requireSession(request, e, path.startsWith('admin/'));
     if (path === 'me' && request.method === 'GET')
       return Response.json({
@@ -66,8 +68,6 @@ export async function handleApi(request: Request, e: AppEnv): Promise<Response> 
         csrf: s.csrf,
         ...(await enrollmentState(e, s.user.id)),
       });
-    if (path === 'enroll' && request.method === 'POST')
-      return await enroll(request, e, await jsonBody(request));
     if (path === 'checkout/resume' && request.method === 'POST') {
       await rateLimit(e, 'checkout:' + s.user.id, 8);
       const v = z.object({ expectedAmount: z.number().int() }).parse(await jsonBody(request));
