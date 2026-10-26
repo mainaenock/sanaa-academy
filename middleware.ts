@@ -1,5 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
+  if (
+    (request.method === 'GET' || request.method === 'HEAD') &&
+    request.nextUrl.hostname.toLowerCase() === 'www.sanaacademy.co.ke'
+  ) {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.hostname = 'sanaacademy.co.ke';
+    return NextResponse.redirect(canonicalUrl, 308);
+  }
+
   const response = NextResponse.next(),
     path = request.nextUrl.pathname;
   response.headers.set('X-Content-Type-Options', 'nosniff');
