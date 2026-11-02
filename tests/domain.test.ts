@@ -19,11 +19,14 @@ const registration = {
 };
 describe('registration and pricing', () => {
   it('calculates the current week using the configured local calendar', () => {
-    expect(currentWeek(defaultCourse, new Date('2026-11-08T21:00:00Z'))).toBe(1);
+    expect(currentWeek(defaultCourse, new Date('2026-11-08T21:00:00Z'))).toBe(0);
+    expect(currentWeek(defaultCourse, new Date('2026-11-15T21:00:00Z'))).toBe(1);
     expect(
-      currentWeek({ ...defaultCourse, timezone: 'UTC' }, new Date('2026-11-08T21:00:00Z')),
+      currentWeek({ ...defaultCourse, timezone: 'UTC' }, new Date('2026-11-15T21:00:00Z')),
     ).toBe(0);
-    expect(currentWeek(defaultCourse, new Date('2026-11-15T21:00:00Z'))).toBe(2);
+    expect(currentWeek(defaultCourse, new Date('2026-11-22T21:00:00Z'))).toBe(2);
+    expect(currentWeek(defaultCourse, new Date('2026-12-18T12:00:00Z'))).toBe(5);
+    expect(currentWeek(defaultCourse, new Date('2026-12-25T12:00:00Z'))).toBe(5);
   });
   it('validates adult data and rejects invalid contact details', () => {
     expect(registrationSchema.safeParse(registration).success).toBe(true);
@@ -47,14 +50,24 @@ describe('registration and pricing', () => {
       }).success,
     ).toBe(true);
   });
-  it('charges KES in subunits through the Nairobi deadline', () => {
-    expect(quote(defaultCourse, new Date('2026-11-01T20:59:59.999Z'))).toMatchObject({
-      amount: 800000,
+  it('keeps the full program fee at KES 5,000 without a discount countdown', () => {
+    for (const date of ['2026-10-31T12:00:00Z', '2026-11-02T12:00:00Z'])
+      expect(quote(defaultCourse, new Date(date))).toMatchObject({
+        amount: 500000,
+        currency: 'KES',
+        early: false,
+        tier: 'regular',
+      });
+  });
+  it('supports a distinct early-bird fee through the Nairobi deadline', () => {
+    const discounted = { ...defaultCourse, early_price: 400000 };
+    expect(quote(discounted, new Date('2026-11-01T20:59:59.999Z'))).toMatchObject({
+      amount: 400000,
       tier: 'early',
       currency: 'KES',
     });
-    expect(quote(defaultCourse, new Date('2026-11-01T21:00:00.000Z'))).toMatchObject({
-      amount: 1000000,
+    expect(quote(discounted, new Date('2026-11-01T21:00:00.000Z'))).toMatchObject({
+      amount: 500000,
       tier: 'regular',
     });
   });

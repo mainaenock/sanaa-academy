@@ -20,6 +20,7 @@ import { LearningHeadline } from '@/components/learning-headline';
 import { runtime, course, site, all, checkoutReady } from '@/lib/db';
 import { quote, money } from '@/lib/domain';
 import { defaultSite, weekSummaries } from '@/lib/defaults';
+import { coursePromises } from '@/lib/curriculum';
 import './home.css';
 
 export const dynamic = 'force-dynamic';
@@ -67,7 +68,9 @@ export default async function Home() {
   const workLinks = Array.from(
     new Set(
       Array.from(
-        s.instructorExperience.matchAll(/(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)/gi),
+        s.instructorExperience.matchAll(
+          /(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)/gi,
+        ),
         ([, domain]) => domain,
       ),
     ),
@@ -134,10 +137,10 @@ export default async function Home() {
             <aside className="learning-faculty" aria-label="Learning guidance">
               <div className="learning-portrait">
                 <img
-                  src={s.instructorImage || '/images/enock-maina.jpg'}
+                  src={s.instructorImage || '/images/enock-maina-transparent.png'}
                   alt={s.instructorImage ? s.instructorName : 'Enock Maina, Sanaa Academy trainer'}
-                  width="382"
-                  height="512"
+                  width="1292"
+                  height="1218"
                 />
               </div>
               <div className="learning-faculty-card">
@@ -156,12 +159,7 @@ export default async function Home() {
                     <h3>Websites I’ve worked on</h3>
                     <div className="learning-work-links">
                       {workLinks.map((domain) => (
-                        <a
-                          href={`https://${domain}`}
-                          key={domain}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
+                        <a href={`https://${domain}`} key={domain} target="_blank" rel="noreferrer">
                           {domain}
                           <ArrowUpRight size={12} aria-hidden="true" />
                         </a>
@@ -212,38 +210,79 @@ export default async function Home() {
                 </div>
                 <div className="learning-curriculum" id="curriculum">
                   <div className="learning-label">AVAILABLE NOW · WEB DEVELOPMENT</div>
-                  <h3>Your first website, from idea to launch.</h3>
+                  <h3>From your idea to your own website in five weeks.</h3>
                   <p>
-                    A guided {c.duration_weeks}-week journey through the foundations, design, data,
-                    deployment, and your own final project.
+                    You bring the idea and make the decisions. Learn to think like an architect and
+                    manage the work while AI helps build your website. No coding background needed.
                   </p>
+                  <ol className="learning-promises" aria-label="What you will achieve">
+                    {coursePromises.map((promise) => (
+                      <li key={promise.title}>
+                        <strong>{promise.title}</strong>
+                        <p>{promise.description}</p>
+                      </li>
+                    ))}
+                  </ol>
                   <div className="learning-course-facts">
                     <span>
                       <CalendarDays size={14} /> {date(c.start_date)} – {date(c.end_date)}
                     </span>
                     <span>
-                      <Clock3 size={14} /> {c.duration_weeks} weeks
+                      <Clock3 size={14} /> {c.duration_weeks} weeks · 15 lessons
                     </span>
                     <span>
                       <Video size={14} /> Live online
                     </span>
+                    <span>Monday · Wednesday · Friday</span>
                   </div>
-                  <div className="learning-milestones">
-                    {weeks.map((w, i) => (
-                      <section className="learning-milestone" key={w.id}>
-                        <div className="learning-milestone-heading">
-                          <span className="learning-week">
-                            {String(w.position).padStart(2, '0')}
-                          </span>
-                          <h4>{w.title}</h4>
-                          {i < 2 && (
-                            <span className="learning-milestone-tag">{weekSummaries[i]?.tag}</span>
-                          )}
-                        </div>
-                        <p>{w.description}</p>
-                      </section>
-                    ))}
+                  <p className="learning-table-hint" id="curriculum-table-help">
+                    Follow each week from left to right. On smaller screens, scroll sideways to see
+                    all three class days.
+                  </p>
+                  <div
+                    className="learning-timetable-scroll"
+                    role="region"
+                    aria-label="Five-week class timetable"
+                    aria-describedby="curriculum-table-help"
+                    tabIndex={0}
+                  >
+                    <table className="learning-timetable">
+                      <caption className="sr-only">
+                        Your five-week timetable: Monday, Wednesday, and Friday
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Week</th>
+                          <th scope="col">Monday</th>
+                          <th scope="col">Wednesday</th>
+                          <th scope="col">Friday</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {weeks.map((w) => (
+                          <tr key={w.id}>
+                            <th scope="row">
+                              <span className="learning-week">
+                                {String(w.position).padStart(2, '0')}
+                              </span>
+                              <strong>{w.title}</strong>
+                              <p>{w.description}</p>
+                            </th>
+                            {weekSummaries[w.position - 1]?.lessons.map((lesson) => (
+                              <td key={lesson.day}>
+                                <strong>{lesson.title}</strong>
+                                <p>{lesson.description}</p>
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
+                  <p className="learning-portal-note">
+                    Register and enroll to open the detailed lesson plans, tools, and practice tasks
+                    in your student dashboard. Class times will be shared there once confirmed.
+                  </p>
                 </div>
                 <div className="learning-callout learning-callout-blue">
                   <h3>
@@ -310,8 +349,9 @@ export default async function Home() {
                 <ul className="learning-inclusions">
                   {[
                     'Live, instructor-led online classes',
-                    'Frontend, backend, databases & deployment',
+                    'Understand how websites work, from pages to saved information',
                     'Your own individual website project',
+                    'Website hosting and guidance connecting your chosen domain',
                     'Student portal, curriculum & progress tracking',
                   ].map((t) => (
                     <li key={t}>
@@ -342,7 +382,7 @@ export default async function Home() {
                   </p>
                 )}
                 <p className="learning-cost-note">
-                  AI subscriptions and optional custom domains are separate. {c.timetable}
+                  AI subscriptions and domain purchases and renewals are separate. {c.timetable}
                 </p>
                 <a className="learning-faq-link" href="/faq">
                   Questions? Read the FAQs <ArrowUpRight size={13} />

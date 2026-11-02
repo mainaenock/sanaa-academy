@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "npm",
   "dependencies": {
+    "@noble/hashes": "2.0.1",
     "react": "latest",
     "react-dom": "latest",
     "vinext": "latest",

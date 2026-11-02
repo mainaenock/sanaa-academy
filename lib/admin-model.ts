@@ -194,7 +194,7 @@ export const courseFields: Field[] = [
     label: 'Regular fee in KES subunits',
     type: 'number',
     required: true,
-    hint: 'KES 10,000 = 1,000,000 subunits.',
+    hint: 'KES 5,000 = 500,000 subunits. Set both fees equally for one flat price.',
   },
   { key: 'early_price', label: 'Early-bird fee in KES subunits', type: 'number', required: true },
   { key: 'early_deadline', label: 'Early-bird expiry', type: 'datetime-local', required: true },

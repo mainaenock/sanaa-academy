@@ -50,6 +50,20 @@ for (const path of [
       'Homepage must render the actual course, not the setup error boundary',
     );
     assert(response.headers.get('content-security-policy')?.includes("frame-ancestors 'none'"));
+    if (process.argv.includes('--check-current-course')) {
+      assert(body.includes('Your own website, at your own address'));
+      assert(body.includes('The confidence to build another'));
+      assert(body.includes('An understanding of how websites work'));
+      const timetable = body.match(/<table class="learning-timetable">([\s\S]*?)<\/table>/)?.[1];
+      assert(timetable, 'The curriculum must render as a table');
+      for (const column of ['Week', 'Monday', 'Wednesday', 'Friday']) {
+        assert(timetable.includes(`<th scope="col">${column}</th>`));
+      }
+      assert.equal((timetable.match(/<th scope="row">/g) ?? []).length, 5);
+      assert.equal((timetable.match(/<td>/g) ?? []).length, 15);
+      assert(body.includes('connect your chosen domain name'));
+      assert(!body.includes('Tools and concepts'), 'Detailed lesson plans must stay private');
+    }
     const css = body.match(/href="([^" ]+\.css)"/)?.[1];
     if (css) assert.equal((await fetch(new URL(css, origin))).status, 200);
   }
@@ -57,6 +71,16 @@ for (const path of [
     const data = JSON.parse(body);
     assert.equal(data.quote.currency, 'KES');
     assert(Number.isInteger(data.quote.amount) && data.quote.amount > 0);
+    if (process.argv.includes('--check-current-course')) {
+      assert.equal(data.quote.amount, 500000);
+      assert.equal(data.quote.early, false);
+      assert.equal(data.course.start_date, '2026-11-16');
+      assert.equal(data.course.end_date, '2026-12-18');
+      assert.equal(data.course.duration_weeks, 5);
+      assert.equal(data.course.regular_price, 500000);
+      assert.equal(data.course.early_price, 500000);
+      assert(data.course.timetable.includes('Monday, Wednesday, and Friday'));
+    }
   }
   results.push({ path, status: response.status });
 }

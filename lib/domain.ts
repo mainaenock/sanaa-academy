@@ -61,7 +61,9 @@ export interface Course {
   timetable: string;
 }
 export function quote(course: Course, now = new Date()) {
-  const early = now.getTime() <= new Date(course.early_deadline).getTime();
+  const early =
+    course.early_price < course.regular_price &&
+    now.getTime() <= new Date(course.early_deadline).getTime();
   return {
     amount: early ? course.early_price : course.regular_price,
     currency: 'KES' as const,

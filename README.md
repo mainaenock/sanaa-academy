@@ -26,7 +26,7 @@ Sign in at `/login?next=/admin` with that email and password. To bootstrap produ
 
 ## What is implemented
 
-- Server-rendered public website with six-week curriculum, time-aware pricing, editable FAQs/instructor/benefits/branding, accessible navigation, reduced-motion support and responsive layouts.
+- Server-rendered public website with five-week curriculum, time-aware pricing, editable FAQs/instructor/benefits/branding, accessible navigation, reduced-motion support and responsive layouts.
 - Student account and profile registration, guardian-controlled minor consent, server-priced KES Paystack hosted M-PESA/card checkout, saved registration recovery and payment confirmation.
 - Transaction verification, signed raw-body webhooks, duplicate protection, atomic enrollment/outbox settlement, failure recovery and refund/reversal handling.
 - Student curriculum and lesson content, completion tracking, private class sessions, resources, assignments, project submissions, feedback, profile and privacy controls.
@@ -34,7 +34,7 @@ Sign in at `/login?next=/admin` with that email and password. To bootstrap produ
 - SQL migrations and content seeds, generated Worker binding types, security headers, CSRF/origin checks, persistent rate limits, secure sessions and validation.
 - Real D1/workerd integration tests, CI checks, deployment configuration and operator documentation.
 
-The initial program is **9 November–18 December 2026**, six weeks in `Africa/Nairobi`. The full early fee is **KES 8,000** through **1 November 2026, 23:59:59.999 EAT**; the regular full fee is **KES 10,000** afterward. All program settings are editable in admin. Meeting times, links, instructor identity, contacts and optional benefits must be configured with actual information.
+The program runs **16 November–18 December 2026**, five weeks in `Africa/Nairobi`, with **15 lessons on Monday, Wednesday, and Friday**. The full program fee is **KES 5,000**, with one flat price and no early-bird expiry. The public curriculum explains the daily value in plain language. Enrolled students open the technical plans and practice tasks in their dashboard: setup/HTML/CSS in week one, JavaScript in week two, a notes app in week three, and React, Workers, D1/SQL, hosting and a chosen domain in weeks four and five. Learners direct AI, review its work, and test the results. Earlier lessons, assignments, progress, and submissions remain stored as history. Meeting times and links must be configured with actual information; domain purchases and renewals are separate costs.
 
 ## Checks
 

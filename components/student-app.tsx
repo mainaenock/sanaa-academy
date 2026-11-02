@@ -255,6 +255,18 @@ export function StudentApp({
       </div>
     ) : (
       <div className="stack">
+        <div className="notice">
+          <strong>Your detailed Monday, Wednesday, and Friday lesson plans</strong>
+          <p>
+            Open each lesson for the tools, concepts, class activities, AI guidance, checks, and
+            practice task. You direct the work and verify what AI builds.
+          </p>
+          <p>
+            Your toolkit: VS Code and Codex; Git and GitHub; HTML, CSS, and JavaScript; then React,
+            Node.js/npm for development tools, Cloudflare Workers for the backend, and D1 with SQL
+            for saved information. Hosting, your chosen domain, and HTTPS are covered in week five.
+          </p>
+        </div>
         {data.weeks.map((w) => {
           const modules = data.modules.filter((m) => m.week_id === w.id);
           const lessonIds = data.lessons.filter((l) => modules.some((m) => m.id === l.module_id));
@@ -280,7 +292,7 @@ export function StudentApp({
                         <a className="list-row" key={l.id} href={'/portal/curriculum/' + l.id}>
                           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                             {completed.has(l.id) ? (
-                              <CheckCircle2 size={19} color="#7aa252" />
+                              <CheckCircle2 size={19} className="completion-icon" />
                             ) : (
                               <BookOpen size={18} color="#8896ac" />
                             )}
@@ -361,11 +373,11 @@ export function StudentApp({
           <div className="eyebrow">YOUR IDEAS BELONG OUT IN THE WORLD</div>
           <h2>Small steps. Real progress.</h2>
           <p>
-            {data.course.title} · {data.course.start_date} — {data.course.end_date}. Keep showing
-            up, asking questions, and building.
+            {data.course.title} · {data.course.duration_weeks} weeks · {data.course.start_date} —{' '}
+            {data.course.end_date}. Keep showing up, asking questions, and building.
           </p>
           <a
-            className="btn btn-lime"
+            className="btn btn-brand"
             href={next ? '/portal/curriculum/' + next.id : '/portal/curriculum'}
           >
             {next ? 'Continue learning' : 'Explore your curriculum'}

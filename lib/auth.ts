@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { pbkdf2 } from '@noble/hashes/pbkdf2.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { all, first, statement, type AppEnv } from './db';
 import { digest, randomToken } from './crypto';
 import { emailSchema } from './domain';
@@ -66,7 +68,10 @@ export async function requireEnrollment(e: AppEnv, userId: string) {
   assert(enrollment, 403, 'A verified active enrollment is required.');
   return enrollment;
 }
-export async function passwordHash(password: string, salt = crypto.getRandomValues(new Uint8Array(16))) {
+export async function passwordHash(
+  password: string,
+  salt = crypto.getRandomValues(new Uint8Array(16)),
+) {
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(password),
@@ -74,11 +79,22 @@ export async function passwordHash(password: string, salt = crypto.getRandomValu
     false,
     ['deriveBits'],
   );
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 210_000 },
-    key,
-    256,
-  );
+  let bits: ArrayBuffer | Uint8Array;
+  try {
+    bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 210_000 },
+      key,
+      256,
+    );
+  } catch (error) {
+    // Production Workers caps native PBKDF2 at 100,000 iterations, unlike local
+    // workerd. Preserve the existing work factor and stored password format.
+    if (!(error instanceof Error) || error.name !== 'NotSupportedError') throw error;
+    bits = pbkdf2(sha256, new TextEncoder().encode(password), salt, {
+      c: 210_000,
+      dkLen: 32,
+    });
+  }
   return `pbkdf2$210000$${Array.from(salt, (b) => b.toString(16).padStart(2, '0')).join('')}$${Array.from(new Uint8Array(bits), (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
 export async function passwordMatches(password: string, encoded: string) {

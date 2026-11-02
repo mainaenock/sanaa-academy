@@ -213,9 +213,9 @@ add(box(58, 42, 58, 58, '#20372D', 16));
 add(mark(60, 47));
 add(text('sanaa', 132, 75, 27, '#FFFFFF', 800));
 add(text('A C A D E M Y', 134, 98, 10, '#B6C5BB', 700, { spacing: 3 }));
-add(pill('NOV 09 — DEC 18, 2026  ·  LIVE ONLINE', 651, 54, 371, 42, '#20372D', '#D8E9D8', 11));
+add(pill('NOV 16 — DEC 18, 2026  ·  LIVE ONLINE', 651, 54, 371, 42, '#20372D', '#D8E9D8', 11));
 
-add(text('A SIX-WEEK, BEGINNER-FRIENDLY BOOTCAMP', 64, 166, 14, '#A9EF70', 800, { spacing: 2 }));
+add(text('A FIVE-WEEK, BEGINNER-FRIENDLY BOOTCAMP', 64, 166, 14, '#A9EF70', 800, { spacing: 2 }));
 add(text('BUILD YOUR', 58, 258, 77, '#F7F4E9', 800, { spacing: -3 }));
 add(text('FIRST WEBSITE', 58, 347, 77, '#A9EF70', 800, { spacing: -3 }));
 add(text('with AI — from first idea to launch.', 66, 391, 21, '#D1DBD2', 500));
@@ -258,14 +258,14 @@ add(text('Web foundations  ·  AI tools  ·  Design  ·  Databases  ·  Deployme
 
 add(box(64, 969, 952, 247, '#F5F1E8', 24));
 add(text('NEXT COHORT', 101, 1008, 11, '#59705F', 800, { spacing: 1.6 }));
-add(text('09 NOV — 18 DEC', 99, 1052, 30, '#14251E', 800, { spacing: -0.4 }));
-add(text('2026  ·  SIX WEEKS  ·  ONLINE', 102, 1081, 13, '#64736B', 600));
+add(text('16 NOV — 18 DEC', 99, 1052, 30, '#14251E', 800, { spacing: -0.4 }));
+add(text('2026  ·  FIVE WEEKS  ·  ONLINE', 102, 1081, 13, '#64736B', 600));
 add(makeQrCodeSvg('https://sanaacademy.co.ke', 391, 1000, 112));
 add(text('SCAN TO VISIT', 447, 1128, 9, '#58705F', 800, { align: 'center', width: 140, spacing: 1 }));
 add(box(534, 995, 1, 155, '#D9DED3'));
-add(text('EARLY FEE  ·  THROUGH 01 NOV', 583, 1008, 11, '#59705F', 800, { spacing: 1.2 }));
-add(text('KES 8,000', 580, 1057, 38, '#216236', 800, { spacing: -0.4 }));
-add(text('Regular fee  KES 10,000', 584, 1085, 13, '#64736B', 500));
+add(text('FULL PROGRAM FEE', 583, 1008, 11, '#59705F', 800, { spacing: 1.2 }));
+add(text('KES 5,000', 580, 1057, 38, '#216236', 800, { spacing: -0.4 }));
+add(text('One payment · full program', 584, 1085, 13, '#64736B', 500));
 add(pill('REGISTRATION OPEN', 581, 1110, 260, 46, '#E96449', '#FFFFFF', 12));
 add(text('PAY THROUGH', 540, 1175, 10, '#58705F', 800, { align: 'center', width: 450, spacing: 1.3 }));
 add(text('www.sanaacademy.co.ke', 540, 1198, 16, '#216236', 800, { align: 'center', width: 450 }));
@@ -277,6 +277,9 @@ await initWasm(await readFile(new URL('../node_modules/@resvg/resvg-wasm/index_b
 const tree = { type: 'div', props: { style: { display: 'flex', position: 'relative', width: W, height: H, backgroundColor: '#101D19' }, children: nodes } };
 const svg = await satori(tree, { width: W, height: H, fonts });
 await writeFile(new URL('../public/ai-web-development-bootcamp-poster-pro.svg', import.meta.url), svg);
+// Keep the primary download on the current generated artwork and course details.
+await writeFile(new URL('../public/ai-web-development-bootcamp-poster.svg', import.meta.url), svg);
 const png = new Resvg(svg).render();
 await writeFile(new URL('../public/ai-web-development-bootcamp-poster-pro.png', import.meta.url), png.asPng());
+await writeFile(new URL('../public/ai-web-development-bootcamp-poster.png', import.meta.url), png.asPng());
 console.log(`Professional poster: ${png.width}x${png.height}`);

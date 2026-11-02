@@ -1,19 +1,20 @@
 import type { Course } from './domain';
+import { publicCurriculum } from './curriculum.ts';
 export const defaultCourse: Course = {
   id: 'ai-web-2026',
   title: 'AI-Powered Web Development Bootcamp',
-  start_date: '2026-11-09',
+  start_date: '2026-11-16',
   end_date: '2026-12-18',
-  duration_weeks: 6,
+  duration_weeks: 5,
   timezone: 'Africa/Nairobi',
-  regular_price: 1000000,
-  early_price: 800000,
+  regular_price: 500000,
+  early_price: 500000,
   early_deadline: '2026-11-01T20:59:59.999Z',
   registration_open: 1,
   opens_at: null,
   closes_at: null,
   capacity: null,
-  timetable: 'Class days and times will be announced.',
+  timetable: 'Classes on Monday, Wednesday, and Friday. Class times will be announced.',
 };
 export const defaultSite = {
   heroHeadline: 'Complex ideas become practical by doing.',
@@ -21,7 +22,7 @@ export const defaultSite = {
     'Build practical technology skills through guided, project-first learning. From web development to the software and apps ahead, understand complex ideas by making them real.',
   tagline: 'Learn. Build. Create.',
   logoText: 'sanaa',
-  accentColor: '#a9ef70',
+  accentColor: '#ff8a00',
   logoUrl: '',
   instructorName: 'Enock Maina',
   instructorBio:
@@ -65,7 +66,7 @@ export const defaultSite = {
     {
       question: 'Are classes live?',
       answer:
-        'Yes, classes will be held online using Google Meet or Zoom. Final days, times, and joining links will be shared in the student portal once scheduled.',
+        'Yes. Classes are on Monday, Wednesday, and Friday, online using Google Meet or Zoom. Class times and joining links will be shared in the student portal once scheduled.',
     },
     {
       question: 'Which AI tools will we use?',
@@ -80,7 +81,7 @@ export const defaultSite = {
     {
       question: 'Will I need hosting or a domain?',
       answer:
-        'We cover Cloudflare deployment and available hosting options. A custom domain is optional and purchased separately. Third-party usage costs are not included.',
+        'We guide you through hosting your website on Cloudflare and connecting your chosen domain name. Domain purchases, renewals, and any paid third-party usage are separate from the course fee.',
     },
     {
       question: 'Do I receive recordings? What if I miss a session?',
@@ -105,37 +106,4 @@ export const defaultSite = {
   ],
 };
 export type SiteContent = typeof defaultSite;
-export const weekSummaries = [
-  {
-    title: 'Think like a builder',
-    description:
-      'Web foundations, AI coding agents, your IDE, project planning, and better prompts.',
-    tag: 'FOUNDATIONS',
-  },
-  {
-    title: 'Give your idea a face',
-    description:
-      'Frontend components, visual design, and interfaces that feel right on every screen.',
-    tag: 'DESIGN & FRONTEND',
-  },
-  {
-    title: 'Make it actually work',
-    description: 'Backends, APIs, databases, forms, and secure authentication.',
-    tag: 'BACKEND & DATA',
-  },
-  {
-    title: 'Take it to the world',
-    description: 'Git, GitHub, Cloudflare deployments, domains, DNS, and HTTPS.',
-    tag: 'SHIP & DEPLOY',
-  },
-  {
-    title: 'Build for the real world',
-    description: 'SEO, Search Console, accessibility, performance, and security.',
-    tag: 'QUALITY & DISCOVERY',
-  },
-  {
-    title: 'Launch your own thing',
-    description: 'Bring it all together. Debug, test, deploy, and present your capstone project.',
-    tag: 'THE CAPSTONE',
-  },
-];
+export const weekSummaries = publicCurriculum;

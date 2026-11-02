@@ -15,8 +15,20 @@ export async function api<T = Record<string, unknown>>(
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const result = (await response.json()) as T & { error?: string };
-  if (!response.ok) throw new Error(result.error ?? 'The request could not be completed.');
+  let result: T & { error?: unknown };
+  try {
+    result = (await response.json()) as T & { error?: unknown };
+  } catch {
+    throw new Error(
+      response.status >= 500
+        ? 'The service is temporarily unavailable. Please try again shortly.'
+        : 'The server returned an unexpected response. Please refresh and try again.',
+    );
+  }
+  if (!response.ok)
+    throw new Error(
+      typeof result?.error === 'string' ? result.error : 'The request could not be completed.',
+    );
   return result;
 }
 export function formValues(form: HTMLFormElement) {

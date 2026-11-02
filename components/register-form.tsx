@@ -118,7 +118,7 @@ export function RegisterForm({
   return (
     <div className="stack">
       <div className="card">
-        <div className="eyebrow">YOUR SIX-WEEK INVESTMENT</div>
+        <div className="eyebrow">YOUR {course.duration_weeks}-WEEK INVESTMENT</div>
         <div
           style={{
             display: 'flex',
@@ -338,7 +338,9 @@ export function RegisterForm({
         <Turnstile siteKey={siteKey} action="register" onToken={setToken} nonce={nonce} />
         <div className="form-actions">
           <button className="btn" disabled={busy || !ready || !isAvailable || !token}>
-          {busy ? 'Preparing your secure checkout…' : `Choose payment method · ${money(price.amount)}`}
+            {busy
+              ? 'Preparing your secure checkout…'
+              : `Choose payment method · ${money(price.amount)}`}
             <ArrowUpRight size={16} />
           </button>
         </div>

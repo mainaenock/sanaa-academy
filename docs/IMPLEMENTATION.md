@@ -2,7 +2,11 @@
 
 The source brief is the goal-objective.md supplied on 17 October 2026. Brand spelling is **Sanaa Academy**.
 
+Current curriculum revision (1 November 2026): the course runs 16 November–18 December 2026 over five weeks for a flat KES 5,000, with fifteen Monday/Wednesday/Friday lessons. Visitors see the three learner promises and a plain-language daily timetable. Active enrolled students see the technical plans, tools, AI briefs, verification steps, and practice deliverables. Week one covers setup, HTML, and CSS; week two JavaScript; week three a notes app and phone installation; weeks four/five React, Workers, D1/SQL, integration, hosting, domains, and launch. Prior lessons and assignments are unpublished history; stored progress and submissions are retained without treating them as completion of new lessons. Earlier dated verification records below describe previous configurations.
+
 ## Architecture
+
+Curriculum verification on 1 November 2026: TypeScript, ESLint, formatting, all 40 workerd/D1 tests, the production build, and deployment dry run passed. The local and deployed website each passed 13 read-only route checks, including the public daily timetable and anonymous private-route rejection. The public layout was inspected at phone and desktop widths without horizontal overflow. Production D1 was exported before migration `0006`; previous learning records were retained. The update was deployed to `https://sanaacademy.co.ke` as Worker version `c84c4147-11a6-4827-9d01-17715f375eef`. Authenticated lesson data and enrollment gating were verified through automated integration tests rather than a live student sign-in.
 
 - Next.js App Router API on vinext, React, TypeScript and Tailwind, running inside Cloudflare workerd.
 - D1 is the source of truth for users, sessions, enrollment, verified transactions, curriculum, progress, submissions, content and audit logs.

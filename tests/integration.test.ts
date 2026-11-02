@@ -182,10 +182,18 @@ describe('authorization and learning actions', () => {
   it('rejects cross-origin and missing CSRF mutations', async () => {
     const user = await account();
     await enrollment(user, 'active');
-    const req = request('student/progress', { lessonId: 'lesson-1-1', completed: true }, user);
+    const req = request(
+      'student/progress',
+      { lessonId: 'daily-lesson-1-1', completed: true },
+      user,
+    );
     req.headers.delete('x-csrf-token');
     expect((await handleApi(req, e)).status).toBe(403);
-    const cross = request('student/progress', { lessonId: 'lesson-1-1', completed: true }, user);
+    const cross = request(
+      'student/progress',
+      { lessonId: 'daily-lesson-1-1', completed: true },
+      user,
+    );
     cross.headers.set('origin', 'https://attacker.test');
     expect((await handleApi(cross, e)).status).toBe(403);
   });
@@ -199,7 +207,7 @@ describe('authorization and learning actions', () => {
         await handleApi(
           request(
             'student/progress',
-            { lessonId: 'lesson-1-1', completed: true, userId: other.id },
+            { lessonId: 'daily-lesson-1-1', completed: true, userId: other.id },
             user,
           ),
           e,
@@ -213,7 +221,7 @@ describe('authorization and learning actions', () => {
       await first(e, 'SELECT user_id FROM lesson_progress WHERE user_id=?', user.id),
     ).not.toBeNull();
     await handleApi(
-      request('student/progress', { lessonId: 'lesson-1-1', completed: false }, user),
+      request('student/progress', { lessonId: 'daily-lesson-1-1', completed: false }, user),
       e,
     );
     expect(
@@ -293,7 +301,7 @@ describe('authorization and learning actions', () => {
       request(
         'student/submissions',
         {
-          assignmentId: 'assignment-1-1',
+          assignmentId: 'daily-assignment-1-1',
           description: 'A project that helps a local community share resources.',
           githubUrl: 'https://github.com/example/project',
           websiteUrl: 'https://example.test',
@@ -445,7 +453,7 @@ describe('authentication and complete enrollment flow', () => {
         )
       ).status,
     ).toBe(401);
-  });
+  }, 90_000); // Software PBKDF2 is slower under the test runner's module instrumentation.
   it('registers a guest, starts checkout, activates the account, and allows sign-in', async () => {
     const email = crypto.randomUUID() + '@example.test',
       password = 'new-learner-password-123',
@@ -582,7 +590,7 @@ describe('authentication and complete enrollment flow', () => {
       noCsrf = request('enroll', {}, existing);
     noCsrf.headers.delete('x-csrf-token');
     expect((await handleApi(noCsrf, configured)).status).toBe(403);
-  });
+  }, 90_000);
   it('initializes a server-priced checkout, confirms payment and grants private lessons', async () => {
     const user = await account(),
       amount = quote(defaultCourse).amount;
@@ -645,7 +653,7 @@ describe('authentication and complete enrollment flow', () => {
     ).toBe(200);
     const classroom = await handleApi(request('student', undefined, user), configured);
     expect(classroom.status).toBe(200);
-    expect(((await classroom.json()) as { lessons: unknown[] }).lessons.length).toBe(12);
+    expect(((await classroom.json()) as { lessons: unknown[] }).lessons.length).toBe(15);
     expect((await handleApi(request('enroll', form, user), configured)).status).toBe(409);
   });
   it('never accepts a client-supplied discounted amount', async () => {

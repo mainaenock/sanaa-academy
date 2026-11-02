@@ -20,7 +20,7 @@ export async function studentData(e: AppEnv, userId: string) {
     all(e, 'SELECT * FROM weeks WHERE course_id=? ORDER BY position', en.course_id),
     all(
       e,
-      'SELECT m.* FROM modules m JOIN weeks w ON w.id=m.week_id WHERE w.course_id=? ORDER BY w.position,m.position',
+      'SELECT m.* FROM modules m JOIN weeks w ON w.id=m.week_id WHERE w.course_id=? AND EXISTS(SELECT 1 FROM lessons l WHERE l.module_id=m.id AND l.published=1) ORDER BY w.position,m.position',
       en.course_id,
     ),
     all(
@@ -33,8 +33,16 @@ export async function studentData(e: AppEnv, userId: string) {
       'SELECT lesson_id,completed_at FROM lesson_progress WHERE user_id=?',
       userId,
     ),
-    all(e, 'SELECT * FROM resources WHERE course_id=? ORDER BY position', en.course_id),
-    all(e, 'SELECT * FROM assignments WHERE course_id=? ORDER BY position', en.course_id),
+    all(
+      e,
+      'SELECT r.* FROM resources r WHERE r.course_id=? AND (r.lesson_id IS NULL OR EXISTS(SELECT 1 FROM lessons l WHERE l.id=r.lesson_id AND l.published=1)) ORDER BY r.position',
+      en.course_id,
+    ),
+    all(
+      e,
+      'SELECT a.* FROM assignments a WHERE a.course_id=? AND (a.lesson_id IS NULL OR EXISTS(SELECT 1 FROM lessons l WHERE l.id=a.lesson_id AND l.published=1)) ORDER BY a.position',
+      en.course_id,
+    ),
     all(
       e,
       'SELECT s.* FROM submissions s JOIN assignments a ON a.id=s.assignment_id WHERE s.user_id=? AND a.course_id=?',

@@ -14,7 +14,7 @@ export function Header({ text, image }: { text?: string; image?: string }) {
         </div>
         <div className="nav-actions">
           <a href="/portal">Student portal ↗</a>
-          <a className="btn btn-lime" href="/register">
+          <a className="btn btn-brand" href="/register">
             Register now <ArrowUpRight size={14} />
           </a>
         </div>
@@ -53,7 +53,7 @@ export function Footer({ site }: { site: SiteContent }) {
               <a href="/register">Register now</a>
               <a href="/portal">Student portal</a>
             </div>
-            <div>
+            <div className="footer-connect">
               <strong>LET’S CONNECT</strong>
               {site.supportEmail ? (
                 <a href={`mailto:${site.supportEmail}`}>Email support ↗</a>
@@ -71,7 +71,7 @@ export function Footer({ site }: { site: SiteContent }) {
                 </a>
               ))}
             </div>
-            <div>
+            <div className="footer-details">
               <strong>THE DETAILS</strong>
               <a href="/policies/privacy">Privacy policy</a>
               <a href="/policies/terms">Terms & conditions</a>
