@@ -249,6 +249,15 @@ export const siteSchema = z
     instructorImage: z.union([safeUrl, z.literal('')]),
     instructorExperience: text,
     supportEmail: z.union([emailSchema, z.literal('')]),
+    supportPhone: z
+      .union([
+        z
+          .string()
+          .trim()
+          .regex(/^\+?[1-9]\d{7,14}$/),
+        z.literal(''),
+      ])
+      .optional(),
     whatsapp: z.union([
       safeUrl.refine((v) => new URL(v).hostname === 'wa.me', 'Use a wa.me link'),
       z.literal(''),

@@ -259,6 +259,11 @@ const websiteFields: Field[] = [
   { key: 'instructorImage', label: 'Faculty portrait URL', type: 'url' },
   { key: 'instructorExperience', label: 'Faculty details or experience' },
   { key: 'supportEmail', label: 'Support email' },
+  {
+    key: 'supportPhone',
+    label: 'Support phone',
+    hint: 'Include the country code, for example +254798578998.',
+  },
   { key: 'whatsapp', label: 'WhatsApp URL (https://wa.me/…) ', type: 'url' },
   { key: 'footerText', label: 'Footer introduction', type: 'textarea' },
 ];

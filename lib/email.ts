@@ -1,5 +1,6 @@
 import { first, statement, type AppEnv } from './db';
 import { escapeHtml } from './domain';
+import { defaultSite } from './defaults';
 import { assert } from './http';
 type Outbox = {
   id: string;
@@ -11,7 +12,7 @@ type Outbox = {
   attempts: number;
 };
 export function emailTemplate(title: string, body: string) {
-  return `<div style="background:#f3f6f9;padding:30px;font-family:Arial,sans-serif;color:#18243a"><div style="max-width:560px;margin:auto;background:white;padding:32px;border-radius:12px"><p style="font-size:24px;font-weight:bold">sanaa <span style="color:#708a5c">academy</span></p><h1 style="font-size:24px">${escapeHtml(title)}</h1>${body}<hr style="border:0;border-top:1px solid #e2e7ed;margin-top:30px"><p style="font-size:11px;color:#66758a">Sanaa Academy · From idea to live website, powered by AI.</p></div></div>`;
+  return `<div style="background:#f3f6f9;padding:30px;font-family:Arial,sans-serif;color:#18243a"><div style="max-width:560px;margin:auto;background:white;padding:32px;border-radius:12px"><p style="font-size:24px;font-weight:bold">sanaa <span style="color:#708a5c">academy</span></p><h1 style="font-size:24px">${escapeHtml(title)}</h1>${body}<hr style="border:0;border-top:1px solid #e2e7ed;margin-top:30px"><p style="font-size:11px;color:#66758a">Sanaa Academy · Powered by <a href="https://sanaastudio.co.ke" style="color:inherit">Sanaa Studio</a>.</p><p style="font-size:11px;color:#66758a"><a href="mailto:${defaultSite.supportEmail}" style="color:inherit">${defaultSite.supportEmail}</a> · <a href="tel:${defaultSite.supportPhone}" style="color:inherit">${defaultSite.supportPhone}</a></p></div></div>`;
 }
 export async function queueEmail(
   e: AppEnv,

@@ -56,10 +56,11 @@ export function Footer({ site }: { site: SiteContent }) {
             <div className="footer-connect">
               <strong>LET’S CONNECT</strong>
               {site.supportEmail ? (
-                <a href={`mailto:${site.supportEmail}`}>Email support ↗</a>
+                <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>
               ) : (
                 <span>Contact details coming soon</span>
               )}
+              {site.supportPhone && <a href={`tel:${site.supportPhone}`}>{site.supportPhone}</a>}
               {site.whatsapp && (
                 <a href={site.whatsapp} target="_blank" rel="noopener noreferrer">
                   WhatsApp ↗
@@ -82,7 +83,13 @@ export function Footer({ site }: { site: SiteContent }) {
         </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Sanaa Academy. All rights reserved.</span>
-          <span>Built on curiosity. Powered by possibility.</span>
+          <span>
+            Built on curiosity. Powered by{' '}
+            <a href="https://sanaastudio.co.ke" target="_blank" rel="noopener noreferrer">
+              Sanaa Studio
+            </a>
+            .
+          </span>
         </div>
       </div>
     </footer>

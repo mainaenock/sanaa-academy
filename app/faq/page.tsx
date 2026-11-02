@@ -37,9 +37,18 @@ export default async function FAQ() {
               <h2>We’re here to help.</h2>
               <p>From your first class to your final project, here’s what to expect.</p>
               {s.supportEmail && (
-                <a className="text-link" href={`mailto:${s.supportEmail}`}>
-                  Contact support <ArrowUpRight size={15} />
-                </a>
+                <p>
+                  <a className="text-link" href={`mailto:${s.supportEmail}`}>
+                    {s.supportEmail} <ArrowUpRight size={15} />
+                  </a>
+                </p>
+              )}
+              {s.supportPhone && (
+                <p>
+                  <a className="text-link" href={`tel:${s.supportPhone}`}>
+                    {s.supportPhone} <ArrowUpRight size={15} />
+                  </a>
+                </p>
               )}
               <p>
                 <a className="text-link" href="/#curriculum">

@@ -30,7 +30,8 @@ export const defaultSite = {
   instructorImage: '',
   instructorExperience:
     'Selected work: wemax.co.ke, sanaastudio.co.ke, kiddyvillakindergarten.com, creativeallstarsacademy.sc.ke, and more.',
-  supportEmail: '',
+  supportEmail: 'info@sanaacademy.co.ke',
+  supportPhone: '+254798578998',
   whatsapp: '',
   socialLinks: [] as { label: string; url: string }[],
   footerText: 'Practical learning for your next chapter.',
