@@ -31,6 +31,34 @@
     radial-gradient(ellipse at 52% 5%, #ff8a001c, transparent 60%),
     radial-gradient(ellipse at 78% 50%, #ffc77324, transparent 40%);
 }
+.learning-hero::after {
+  content: '';
+  position: absolute;
+  width: 190px;
+  aspect-ratio: 1;
+  left: clamp(-90px, 3vw, 70px);
+  top: 38px;
+  border: 2px solid #ff8a0033;
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
+}
+.learning-hero > .learning-container {
+  position: relative;
+  isolation: isolate;
+}
+.learning-hero > .learning-container::before {
+  content: '';
+  position: absolute;
+  width: 25px;
+  aspect-ratio: 1;
+  right: 3%;
+  top: 18px;
+  border-radius: 50%;
+  background: #ff8a0070;
+  z-index: -1;
+  pointer-events: none;
+}
 .learning-pill {
   display: inline-flex;
   align-items: center;
@@ -166,6 +194,30 @@
 }
 .learning-content {
   padding: 64px 0;
+  position: relative;
+  isolation: isolate;
+}
+.learning-content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle 125px at -45px 650px,
+      transparent 97%,
+      #ff8a002b 98%,
+      #ff8a002b 99%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 42px at calc(100% - 15px) 140px,
+      transparent 95%,
+      #ff8a0026 96%,
+      #ff8a0026 99%,
+      transparent 100%
+    );
+  z-index: -1;
+  pointer-events: none;
 }
 .learning-editorial-layout {
   display: grid;
@@ -179,17 +231,53 @@
   max-width: 420px;
 }
 .learning-portrait {
+  position: relative;
+  isolation: isolate;
   overflow: hidden;
-  background: transparent;
-  border-radius: 3px 3px 0 0;
+  padding-top: 20px;
+  background: radial-gradient(ellipse at 50% 64%, #ff8a0024, transparent 72%);
+  border-radius: 24px 24px 4px 4px;
+}
+.learning-portrait::before {
+  content: '';
+  position: absolute;
+  width: 105%;
+  aspect-ratio: 1;
+  left: 50%;
+  bottom: -12%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 48% 42%,
+    #ffda9e 0%,
+    #ffac3d 39%,
+    #ff8a0099 61%,
+    #ff8a0000 74%
+  );
+  z-index: -1;
+  pointer-events: none;
+}
+.learning-portrait::after {
+  content: '';
+  position: absolute;
+  width: 85%;
+  aspect-ratio: 1;
+  top: 5%;
+  left: 5%;
+  border: 1.5px solid #d1740040;
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
 }
 .learning-portrait img {
+  position: relative;
   display: block;
   width: 100%;
   height: auto;
   max-height: 550px;
   object-fit: contain;
   object-position: bottom;
+  filter: drop-shadow(0 10px 14px #7f360024);
 }
 .learning-faculty-card {
   position: relative;
@@ -578,6 +666,33 @@
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   scroll-margin-top: 80px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.learning-pricing::before {
+  content: '';
+  position: absolute;
+  width: 340px;
+  aspect-ratio: 1;
+  right: -170px;
+  top: -150px;
+  border: 2px solid #ff8a0038;
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
+}
+.learning-pricing::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  aspect-ratio: 1;
+  left: max(20px, calc((100% - 1120px) / 2));
+  bottom: 25px;
+  border-radius: 50%;
+  background: #ff8a0066;
+  z-index: -1;
+  pointer-events: none;
 }
 .learning-price-card {
   max-width: 960px;
@@ -785,6 +900,16 @@
   .learning-hero {
     padding: 50px 0 44px;
   }
+  .learning-hero::after {
+    width: 110px;
+    left: -55px;
+    top: 22px;
+  }
+  .learning-hero > .learning-container::before {
+    width: 13px;
+    top: 0;
+    right: 0;
+  }
   .learning-hero h1 {
     font-size: 43px;
   }
@@ -818,6 +943,11 @@
   }
   .learning-pricing {
     padding: 42px 0;
+  }
+  .learning-pricing::before {
+    width: 240px;
+    right: -155px;
+    top: -110px;
   }
   .learning-checkout {
     padding: 25px;
