@@ -369,6 +369,109 @@
   font-size: 9px;
   font-style: italic;
 }
+.learning-portfolio {
+  margin-top: clamp(36px, 5vw, 64px);
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.learning-portfolio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.learning-portfolio-header h2 {
+  margin: 0;
+  font-size: clamp(20px, 2.5vw, 26px);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+}
+.learning-portfolio-controls {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+.learning-portfolio-controls button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent-strong);
+  cursor: pointer;
+}
+.learning-portfolio-controls button:not([aria-disabled='true']):hover {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+.learning-portfolio-controls button[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+.learning-portfolio-track {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 0 0 12px;
+  overflow-x: auto;
+  list-style: none;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-strong) var(--border);
+}
+.learning-portfolio-track > li {
+  display: flex;
+  flex: 0 0 min(20rem, 82%);
+  min-width: 0;
+  scroll-snap-align: start;
+}
+.learning-portfolio-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+.learning-portfolio-card:hover {
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
+}
+.learning-portfolio .learning-portfolio-card:focus-visible {
+  outline-offset: -3px;
+}
+.learning-portfolio-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1120 / 650;
+  object-fit: cover;
+  object-position: top;
+  background: var(--accent-soft);
+}
+.learning-portfolio-card span {
+  flex: 1;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+@media (prefers-reduced-motion: reduce) {
+  .learning-portfolio-track {
+    scroll-behavior: auto;
+  }
+}
 .learning-editorial-header {
   padding-bottom: 24px;
   border-bottom: 1px solid var(--border);

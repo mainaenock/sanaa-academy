@@ -23,8 +23,14 @@ export function LoginForm({
     setError('');
     const v = formValues(event.currentTarget);
     try {
-      await api('auth/login', { email: v.email, password: v.password, turnstileToken: token });
-      window.location.assign(next.startsWith('/') && !next.startsWith('//') ? next : '/portal');
+      const { user } = await api<{ user: { role: 'admin' | 'student' } }>('auth/login', {
+        email: v.email,
+        password: v.password,
+        turnstileToken: token,
+      });
+      window.location.assign(
+        user.role === 'admin' ? '/admin' : next === '/register' ? '/register' : '/portal',
+      );
     } catch (error) {
       setError((error as Error).message);
       setBusy(false);

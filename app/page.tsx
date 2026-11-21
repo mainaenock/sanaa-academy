@@ -17,6 +17,7 @@ import {
 import { Header, Footer } from '@/components/public-shell';
 import { Countdown } from '@/components/countdown';
 import { LearningHeadline } from '@/components/learning-headline';
+import { PortfolioGallery } from '@/components/portfolio-gallery';
 import { runtime, course, site, all, checkoutReady } from '@/lib/db';
 import { quote, money } from '@/lib/domain';
 import { defaultSite, weekSummaries } from '@/lib/defaults';
@@ -326,6 +327,7 @@ export default async function Home() {
               </article>
             </div>
           </div>
+          <PortfolioGallery />
         </section>
         <section className="learning-pricing" id="pricing">
           <div className="learning-container">
