@@ -303,21 +303,24 @@ export async function initialize(
   }
   const reference = 'sanaa-' + crypto.randomUUID(),
     id = crypto.randomUUID();
+  let attempt;
   try {
-    await statement(
+    attempt = await statement(
       e,
-      'INSERT INTO transactions(id,reference,enrollment_id,payer_email,amount,pricing_tier,provider_mode) VALUES(?,?,?,?,?,?,?)',
+      `INSERT INTO transactions(id,reference,enrollment_id,payer_email,amount,pricing_tier,provider_mode)
+       SELECT ?,?,id,?,?,?,? FROM enrollments WHERE id=? AND status='pending'`,
       id,
       reference,
-      enrollmentId,
       user.email,
       price.amount,
       price.tier,
       e.PAYSTACK_MODE,
+      enrollmentId,
     ).run();
   } catch {
     throw new HttpError(409, 'A checkout is already being prepared. Refresh to resume it.');
   }
+  assert(attempt.meta.changes === 1, 409, 'Only your pending enrollment can be paid.');
   try {
     const result = z.object({ authorization_url: z.string().url(), reference: z.string() }).parse(
       await paystack(e, '/transaction/initialize', {
@@ -366,9 +369,9 @@ export async function settle(e: AppEnv, data: VerifiedPayment) {
   assert(paymentMatches(tx, data), 400, 'Payment details do not match this enrollment.');
   if (['refunded', 'reversed'].includes(tx.status))
     return { status: tx.status, reference: tx.reference };
-  const pendingSecret = await first<{ user_id: string; password_hash: string }>(
+  const pendingSecret = await first<{ user_id: string }>(
     e,
-    'SELECT rs.user_id,rs.password_hash FROM registration_secrets rs JOIN enrollments en ON en.user_id=rs.user_id WHERE en.id=?',
+    'SELECT rs.user_id FROM registration_secrets rs JOIN enrollments en ON en.user_id=rs.user_id WHERE en.id=?',
     tx.enrollment_id,
   );
   const statements = [];
@@ -376,8 +379,9 @@ export async function settle(e: AppEnv, data: VerifiedPayment) {
     statements.push(
       statement(
         e,
-        'UPDATE users SET password_hash=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND password_hash IS NULL',
-        pendingSecret.password_hash,
+        `UPDATE users SET password_hash=(SELECT password_hash FROM registration_secrets WHERE user_id=users.id),
+         updated_at=CURRENT_TIMESTAMP WHERE id=? AND password_hash IS NULL
+         AND EXISTS (SELECT 1 FROM registration_secrets WHERE user_id=users.id)`,
         pendingSecret.user_id,
       ),
       statement(e, 'DELETE FROM registration_secrets WHERE user_id=?', pendingSecret.user_id),

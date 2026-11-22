@@ -172,6 +172,162 @@ describe('real D1 settlement', () => {
     ).toBe('failed');
   });
 });
+describe('offline student enrollment', () => {
+  const path = 'admin/offline-enrollment';
+  const activate = 'auth/activate-student';
+
+  it(
+    'lets a new offline student set a password, track progress, and sign in again',
+    { timeout: 90_000 },
+    async () => {
+      const admin = await account('admin');
+      const email = crypto.randomUUID() + '@example.test';
+      const enrolled = await handleApi(request(path, { email: email.toUpperCase() }, admin), e);
+      expect(enrolled.status).toBe(200);
+      const { studentId, setupUrl } = await enrolled.json<{
+        studentId: string;
+        setupUrl: string;
+      }>();
+      const token = new URL(setupUrl).hash.slice(1);
+      const password = 'A student portal password';
+      const credentials = { email, token, password };
+
+      expect(
+        (await handleApi(request(activate, { ...credentials, email: admin.email }), e)).status,
+      ).toBe(400);
+      const response = await handleApi(request(activate, credentials), e);
+      expect(response.status).toBe(200);
+      const { csrf } = await response.json<{ csrf: string }>();
+      const student = {
+        id: studentId,
+        email,
+        csrf,
+        cookie: response.headers.get('Set-Cookie')!.split(';')[0],
+      };
+      expect((await handleApi(request(activate, credentials), e)).status).toBe(400);
+      const initial = await handleApi(request('student', undefined, student), e);
+      expect(initial.status).toBe(200);
+      expect(await initial.json()).toMatchObject({ progress: [] });
+      const lessonId = 'daily-lesson-1-1';
+      expect(
+        (await handleApi(request('student/progress', { lessonId, completed: true }, student), e))
+          .status,
+      ).toBe(200);
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        Response.json({ success: true, action: 'login', hostname: 'localhost' }),
+      );
+      const signedIn = await handleApi(
+        request('auth/login', { email, password, turnstileToken: 'test-token' }),
+        { ...e, TURNSTILE_SECRET_KEY: 'test-key' },
+      );
+      expect(signedIn.status).toBe(200);
+      const cookie = signedIn.headers.get('Set-Cookie')!.split(';')[0];
+      const portal = await handleApi(request('student', undefined, { ...student, cookie }), e);
+      expect(await portal.json()).toMatchObject({ progress: [{ lesson_id: lessonId }] });
+      const me = await handleApi(request('me', undefined, { ...student, cookie }), e);
+      expect((await me.json<{ user: Record<string, unknown> }>()).user).not.toHaveProperty(
+        'password_hash',
+      );
+      expect(
+        await first(
+          e,
+          'SELECT t.id FROM transactions t JOIN enrollments en ON en.id=t.enrollment_id WHERE en.user_id=?',
+          studentId,
+        ),
+      ).toBeNull();
+      expect(
+        await first(
+          e,
+          `SELECT a.id FROM admin_audit_logs a JOIN enrollments en ON en.id=a.entity_id WHERE a.actor_id=? AND a.action='enroll_offline' AND en.user_id=?`,
+          admin.id,
+          studentId,
+        ),
+      ).toBeTruthy();
+    },
+  );
+
+  it('requires admin authorization and preserves an existing student password and enrollment', async () => {
+    const admin = await account('admin');
+    const student = await account();
+    const id = await enrollment(student);
+    const password = await passwordHash('Existing student password');
+    await statement(e, 'UPDATE users SET password_hash=? WHERE id=?', password, student.id).run();
+    expect((await handleApi(request(path, { email: student.email }), e)).status).toBe(401);
+    expect((await handleApi(request(path, { email: student.email }, student), e)).status).toBe(403);
+    const noCsrf = request(path, { email: student.email }, admin);
+    noCsrf.headers.delete('x-csrf-token');
+    expect((await handleApi(noCsrf, e)).status).toBe(403);
+    expect((await handleApi(request(path, { email: admin.email }, admin), e)).status).toBe(409);
+
+    const grant = await handleApi(request(path, { email: student.email }, admin), e);
+    expect(await grant.json()).toEqual({ studentId: student.id, enrolled: true, setupUrl: null });
+    const repeat = await handleApi(request(path, { email: student.email }, admin), e);
+    expect(await repeat.json()).toEqual({ studentId: student.id, enrolled: false, setupUrl: null });
+    expect(
+      await first(e, 'SELECT status,offline_enrolled FROM enrollments WHERE id=?', id),
+    ).toEqual({ status: 'active', offline_enrolled: 1 });
+    expect(await first(e, 'SELECT password_hash FROM users WHERE id=?', student.id)).toEqual({
+      password_hash: password,
+    });
+  });
+
+  it('guards pending Paystack attempts and rotates password links without retaining a checkout password', async () => {
+    const admin = await account('admin');
+    const student = await account();
+    const id = await enrollment(student);
+    const pending = await transaction(id);
+    await statement(
+      e,
+      'INSERT INTO registration_secrets(user_id,password_hash) VALUES(?,?)',
+      student.id,
+      'checkout-password-hash',
+    ).run();
+    expect((await handleApi(request(path, { email: student.email }, admin), e)).status).toBe(409);
+    expect(await first(e, 'SELECT status FROM enrollments WHERE id=?', id)).toEqual({
+      status: 'pending',
+    });
+    await statement(
+      e,
+      "UPDATE transactions SET status='abandoned' WHERE reference=?",
+      pending.reference,
+    ).run();
+    const enroll = () => handleApi(request(path, { email: student.email }, admin), e);
+    const firstLink = new URL(
+      (await (await enroll()).json<{ setupUrl: string }>()).setupUrl,
+    ).hash.slice(1);
+    const newLink = new URL(
+      (await (await enroll()).json<{ setupUrl: string }>()).setupUrl,
+    ).hash.slice(1);
+    const attempt = { email: student.email, password: 'A new student password' };
+    expect((await handleApi(request(activate, { ...attempt, token: firstLink }), e)).status).toBe(
+      400,
+    );
+    await statement(
+      e,
+      'UPDATE student_password_setups SET expires_at=0 WHERE user_id=?',
+      student.id,
+    ).run();
+    expect((await handleApi(request(activate, { ...attempt, token: newLink }), e)).status).toBe(
+      400,
+    );
+    expect(
+      await first(e, 'SELECT user_id FROM registration_secrets WHERE user_id=?', student.id),
+    ).toBeNull();
+    await settle(e, pending);
+    await statement(
+      e,
+      "UPDATE transactions SET status='refunded' WHERE reference=?",
+      pending.reference,
+    ).run();
+    expect(await first(e, 'SELECT status FROM enrollments WHERE id=?', id)).toEqual({
+      status: 'active',
+    });
+    expect(await first(e, 'SELECT password_hash FROM users WHERE id=?', student.id)).toEqual({
+      password_hash: null,
+    });
+  });
+});
 describe('authorization and learning actions', () => {
   it('rejects anonymous and non-admin access', async () => {
     expect((await handleApi(request('admin/students'), e)).status).toBe(401);

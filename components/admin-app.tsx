@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   ArrowUpRight,
   Download,
@@ -38,6 +38,7 @@ export function AdminApp({
     [error, setError] = useState(''),
     [message, setMessage] = useState(''),
     [editing, setEditing] = useState<Row | null | undefined>(undefined),
+    [showOfflineEnrollment, setShowOfflineEnrollment] = useState(false),
     [search, setSearch] = useState(''),
     [status, setStatus] = useState(''),
     [page, setPage] = useState(0);
@@ -235,11 +236,22 @@ export function AdminApp({
                 ))}
               </select>
             </div>
-            <a className="btn btn-light" href={'/api/admin/export' + query}>
-              <Download size={14} />
-              Export these results
-            </a>
+            <div className="record-actions">
+              <a className="btn btn-light" href={'/api/admin/export' + query}>
+                <Download size={14} />
+                Export these results
+              </a>
+              <button
+                className="btn"
+                aria-expanded={showOfflineEnrollment}
+                onClick={() => setShowOfflineEnrollment((open) => !open)}
+              >
+                <Plus size={15} />
+                Enroll offline student
+              </button>
+            </div>
           </div>
+          {showOfflineEnrollment && <OfflineEnrollmentForm csrf={csrf} onEnrolled={load} />}
           <Table
             rows={rows}
             columns={['name', 'email', 'phone', 'enrollment_status', 'completed_lessons']}
@@ -384,6 +396,106 @@ export function AdminApp({
         content
       )}
     </WorkspaceShell>
+  );
+}
+function OfflineEnrollmentForm({
+  csrf,
+  onEnrolled,
+}: {
+  csrf: string;
+  onEnrolled: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [copyMessage, setCopyMessage] = useState('');
+  const [result, setResult] = useState<{
+    studentId: string;
+    enrolled: boolean;
+    setupUrl: string | null;
+  }>();
+  const link = useRef<HTMLInputElement>(null);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const { email } = formValues(event.currentTarget);
+    setBusy(true);
+    setError('');
+    setResult(undefined);
+    setCopyMessage('');
+    try {
+      setResult(await api<NonNullable<typeof result>>('admin/offline-enrollment', { email }, csrf));
+      await onEnrolled();
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyLink() {
+    if (!link.current) return;
+    try {
+      await navigator.clipboard.writeText(link.current.value);
+      setCopyMessage('Setup link copied.');
+    } catch {
+      link.current?.select();
+      setCopyMessage('Copy the selected link to share it.');
+    }
+  }
+
+  return (
+    <section className="card" aria-labelledby="offline-enrollment-heading">
+      <h2 id="offline-enrollment-heading">Enroll an offline student</h2>
+      <p className="muted">Grant portal access after receiving payment outside the website.</p>
+      <form onSubmit={submit}>
+        <label className="field">
+          <span>Student account email</span>
+          <input type="email" name="email" autoComplete="email" maxLength={254} required />
+        </label>
+        <div className="form-actions">
+          <button className="btn" disabled={busy}>
+            {busy ? 'Saving…' : 'Grant portal access'}
+          </button>
+        </div>
+      </form>
+      {error && (
+        <div className="notice error" role="alert">
+          {error}
+        </div>
+      )}
+      {result && (
+        <>
+          <p className="notice success" role="status">
+            {result.enrolled ? 'Portal access granted.' : 'This student already has portal access.'}{' '}
+            <a className="text-link" href={'/admin/students/' + result.studentId}>
+              View learner
+            </a>
+          </p>
+          {result.setupUrl ? (
+            <>
+              <label className="field">
+                <span>One-time setup link</span>
+                <input type="url" readOnly value={result.setupUrl} ref={link} />
+                <small>
+                  Share privately with the student. It expires in seven days. Submitting the same
+                  email again replaces this link.
+                </small>
+              </label>
+              <div className="form-actions">
+                <button className="btn btn-light" onClick={() => void copyLink()}>
+                  Copy setup link
+                </button>
+                <span className="tiny" role="status">
+                  {copyMessage}
+                </span>
+              </div>
+            </>
+          ) : (
+            <p className="muted">The student can sign in with their existing password.</p>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 function Table({
@@ -580,6 +692,7 @@ function StudentDetail({
           Account created {string(user, 'created_at')} · Age category:{' '}
           {string(user, 'age_category') || 'Not provided'}
         </p>
+        {user.offline_enrolled === 1 && <p className="tiny">Enrolled after offline payment</p>}
         {guardian && (
           <div className="notice">
             <strong>Guardian consent verified</strong>

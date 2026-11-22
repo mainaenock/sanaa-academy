@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 const projects = [
@@ -19,12 +19,25 @@ const projects = [
 
 export function PortfolioGallery() {
   const trackRef = useRef<HTMLUListElement>(null);
+  const mouseOverTrack = useRef(false);
+  const resumeAt = useRef(0);
+  const [canAnimate, setCanAnimate] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(true);
+  const playing = canAnimate && !paused;
+
+  useEffect(() => {
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setCanAnimate(!motion.matches);
+    update();
+    motion.addEventListener('change', update);
+    return () => motion.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     const track = trackRef.current;
-    if (!track) return;
+    if (!track || canAnimate) return;
 
     const updateControls = () => {
       setCanGoBack(track.scrollLeft > 2);
@@ -40,7 +53,48 @@ export function PortfolioGallery() {
       track.removeEventListener('scroll', updateControls);
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [canAnimate]);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || !playing) return;
+
+    let frame = 0;
+    let previous = 0;
+    let distance = 0;
+    function advance(now: number) {
+      if (!track) return;
+      const elapsed = previous ? Math.min(now - previous, 50) : 0;
+      previous = now;
+      if (!mouseOverTrack.current && now >= resumeAt.current && !track.matches(':focus-within')) {
+        distance += elapsed * 0.035;
+        const pixels = Math.floor(distance);
+        if (pixels) {
+          const repeated = track.children[projects.length];
+          if (repeated instanceof HTMLElement && repeated.offsetLeft) {
+            track.scrollLeft = (track.scrollLeft + pixels) % repeated.offsetLeft;
+          }
+          distance -= pixels;
+        }
+      }
+      frame = requestAnimationFrame(advance);
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      cancelAnimationFrame(frame);
+      previous = 0;
+      if (entry.isIntersecting) frame = requestAnimationFrame(advance);
+    });
+    observer.observe(track);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [playing]);
+
+  function pauseForInteraction() {
+    resumeAt.current = performance.now() + 3000;
+  }
 
   function move(direction: -1 | 1) {
     const track = trackRef.current;
@@ -48,12 +102,22 @@ export function PortfolioGallery() {
     const second = track?.children[1];
     if (!track || !(first instanceof HTMLElement) || !(second instanceof HTMLElement)) return;
 
+    pauseForInteraction();
     const step = second.offsetLeft - first.offsetLeft;
+    const repeated = track.children[projects.length];
+    const loopWidth = repeated instanceof HTMLElement ? repeated.offsetLeft : 0;
+    let left = track.scrollLeft;
+    if (loopWidth && left >= loopWidth) {
+      left %= loopWidth;
+      track.scrollLeft = left;
+    }
+    if (loopWidth && direction === -1 && left < 2) {
+      left += loopWidth;
+      track.scrollLeft = left;
+    }
     const next =
-      direction === 1
-        ? Math.floor((track.scrollLeft + 2) / step) + 1
-        : Math.ceil((track.scrollLeft - 2) / step) - 1;
-    track.scrollTo({ left: next * step });
+      direction === 1 ? Math.floor((left + 2) / step) + 1 : Math.ceil((left - 2) / step) - 1;
+    track.scrollTo({ left: next * step, behavior: canAnimate ? 'smooth' : 'instant' });
   }
 
   return (
@@ -65,8 +129,8 @@ export function PortfolioGallery() {
             type="button"
             aria-controls="portfolio-projects"
             aria-label="Previous website previews"
-            aria-disabled={!canGoBack}
-            onClick={() => canGoBack && move(-1)}
+            aria-disabled={!canAnimate && !canGoBack}
+            onClick={() => (canAnimate || canGoBack) && move(-1)}
           >
             <ChevronLeft size={20} aria-hidden="true" />
           </button>
@@ -74,35 +138,72 @@ export function PortfolioGallery() {
             type="button"
             aria-controls="portfolio-projects"
             aria-label="Next website previews"
-            aria-disabled={!canGoForward}
-            onClick={() => canGoForward && move(1)}
+            aria-disabled={!canAnimate && !canGoForward}
+            onClick={() => (canAnimate || canGoForward) && move(1)}
           >
             <ChevronRight size={20} aria-hidden="true" />
           </button>
+          {canAnimate && (
+            <button
+              type="button"
+              aria-label={playing ? 'Pause automatic scrolling' : 'Resume automatic scrolling'}
+              aria-controls="portfolio-projects"
+              onClick={() => {
+                resumeAt.current = 0;
+                setPaused(!paused);
+              }}
+            >
+              {playing ? (
+                <Pause size={17} aria-hidden="true" />
+              ) : (
+                <Play size={17} aria-hidden="true" />
+              )}
+            </button>
+          )}
         </div>
       </div>
-      <ul className="learning-portfolio-track" id="portfolio-projects" ref={trackRef} role="list">
-        {projects.map(([name, domain, image]) => (
-          <li key={domain}>
-            <a
-              className="learning-portfolio-card"
-              href={`https://${domain}/`}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={`${name} (opens in a new tab)`}
-            >
-              <img
-                src={`/images/portfolio/${image}.webp`}
-                alt=""
-                width={1120}
-                height={650}
-                loading="lazy"
-                decoding="async"
-              />
-              <span>{name}</span>
-            </a>
-          </li>
-        ))}
+      <ul
+        className="learning-portfolio-track"
+        data-loop={canAnimate || undefined}
+        id="portfolio-projects"
+        ref={trackRef}
+        role="list"
+        onPointerEnter={(event) => {
+          if (event.pointerType === 'mouse') mouseOverTrack.current = true;
+        }}
+        onPointerLeave={() => {
+          mouseOverTrack.current = false;
+        }}
+        onPointerDown={pauseForInteraction}
+        onPointerUp={pauseForInteraction}
+        onPointerCancel={pauseForInteraction}
+        onTouchMove={pauseForInteraction}
+        onWheel={pauseForInteraction}
+      >
+        {(canAnimate ? [...projects, ...projects] : projects).map(
+          ([name, domain, image], index) => (
+            <li key={`${domain}-${index}`} aria-hidden={index >= projects.length || undefined}>
+              <a
+                className="learning-portfolio-card"
+                href={`https://${domain}/`}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`${name} (opens in a new tab)`}
+                tabIndex={index >= projects.length ? -1 : undefined}
+              >
+                <img
+                  src={`/images/portfolio/${image}.webp`}
+                  alt=""
+                  width={1120}
+                  height={650}
+                  loading="lazy"
+                  decoding="async"
+                />
+                <span>{name}</span>
+              </a>
+            </li>
+          ),
+        )}
       </ul>
     </section>
   );

@@ -3,7 +3,7 @@ import { pbkdf2 } from '@noble/hashes/pbkdf2.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { all, first, statement, type AppEnv } from './db';
 import { digest, randomToken } from './crypto';
-import { emailSchema } from './domain';
+import { COURSE_ID, emailSchema } from './domain';
 import { assert, botCheck, rateLimit } from './http';
 const passwordSchema = z.string().min(10).max(128);
 export interface User {
@@ -41,11 +41,15 @@ export async function sessionFromCookie(e: AppEnv, cookie: string | null): Promi
   const hash = await digest(value);
   const row = await first<User & { csrf_token: string }>(
     e,
-    'SELECT u.*,s.csrf_token FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?',
+    `SELECT u.id,u.email,u.name,u.phone,u.role,u.age_category,u.experience,u.project_interest,
+      u.updates_opt_in,u.verified_at,u.deletion_requested_at,u.created_at,s.csrf_token
+     FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?`,
     hash,
     Math.floor(Date.now() / 1000),
   );
-  return row ? { user: row, csrf: row.csrf_token, hash } : null;
+  if (!row) return null;
+  const { csrf_token: csrf, ...user } = row;
+  return { user, csrf, hash };
 }
 export async function requireSession(request: Request, e: AppEnv, admin = false) {
   const s = await sessionFromCookie(e, request.headers.get('cookie'));
@@ -172,6 +176,53 @@ export async function loginPassword(request: Request, e: AppEnv, input: unknown)
     401,
     'Email or password is incorrect.',
   );
+  return createSession(e, user);
+}
+export async function activateStudent(request: Request, e: AppEnv, input: unknown) {
+  const { email, password, token } = z
+    .object({
+      email: emailSchema,
+      password: passwordSchema,
+      token: z.string().regex(/^[a-f0-9]{64}$/),
+    })
+    .parse(input);
+  await rateLimit(
+    e,
+    'student-activation:' + (request.headers.get('cf-connecting-ip') ?? 'unknown'),
+    12,
+  );
+  const tokenHash = await digest(token);
+  const eligible = `users.email=? AND users.role='student' AND users.password_hash IS NULL
+    AND users.deletion_requested_at IS NULL AND EXISTS (
+      SELECT 1 FROM student_password_setups p JOIN enrollments en ON en.user_id=p.user_id
+      WHERE p.user_id=users.id AND p.token_hash=? AND p.expires_at>CAST(strftime('%s','now') AS INTEGER)
+        AND en.course_id=? AND en.status='active'
+    )`;
+  const invalid =
+    'This setup link is invalid, expired, or already used. Check your email address or ask the academy for a new link.';
+  assert(
+    await first(e, `SELECT id FROM users WHERE ${eligible}`, email, tokenHash, COURSE_ID),
+    400,
+    invalid,
+  );
+
+  const [updated] = await e.DB.batch<User>([
+    statement(
+      e,
+      `UPDATE users SET password_hash=?,updated_at=CURRENT_TIMESTAMP WHERE ${eligible} RETURNING *`,
+      await passwordHash(password),
+      email,
+      tokenHash,
+      COURSE_ID,
+    ),
+    statement(
+      e,
+      'DELETE FROM student_password_setups WHERE token_hash=? AND changes()=1',
+      tokenHash,
+    ),
+  ]);
+  const user = updated.results[0];
+  assert(user, 400, invalid);
   return createSession(e, user);
 }
 export async function logout(request: Request, e: AppEnv) {

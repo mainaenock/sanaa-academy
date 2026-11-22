@@ -3,10 +3,10 @@ import { requireEnrollment, requireSession } from './auth';
 import { entities, isEntity, courseSchema, siteSchema } from './admin-model';
 import { all, course, first, site, statement, type AppEnv } from './db';
 import { assert, HttpError } from './http';
-import { COURSE_ID, csvCell, escapeHtml } from './domain';
+import { COURSE_ID, csvCell, emailSchema, escapeHtml } from './domain';
 import { deliverEmail, emailTemplate, resendWelcome } from './email';
 import { digest, randomToken } from './crypto';
-export const studentSelect = `SELECT u.id,u.email,u.name,u.phone,u.age_category,u.created_at,en.id enrollment_id,en.status enrollment_status,en.activated_at,(SELECT COUNT(*) FROM lesson_progress p JOIN lessons l ON l.id=p.lesson_id JOIN modules m ON m.id=l.module_id JOIN weeks w ON w.id=m.week_id WHERE p.user_id=u.id AND l.published=1 AND w.course_id='ai-web-2026') completed_lessons FROM users u LEFT JOIN enrollments en ON en.user_id=u.id AND en.course_id='ai-web-2026' WHERE u.role='student'`;
+export const studentSelect = `SELECT u.id,u.email,u.name,u.phone,u.age_category,u.created_at,en.id enrollment_id,en.status enrollment_status,en.activated_at,en.offline_enrolled,(SELECT COUNT(*) FROM lesson_progress p JOIN lessons l ON l.id=p.lesson_id JOIN modules m ON m.id=l.module_id JOIN weeks w ON w.id=m.week_id WHERE p.user_id=u.id AND l.published=1 AND w.course_id='ai-web-2026') completed_lessons FROM users u LEFT JOIN enrollments en ON en.user_id=u.id AND en.course_id='ai-web-2026' WHERE u.role='student'`;
 export async function adminOverview(e: AppEnv) {
   const [counts, payments, progress, upcoming, recent, privacy, emails] = await Promise.all([
     first(
@@ -135,6 +135,7 @@ export async function adminRead(e: AppEnv, resource: string, url: URL) {
 }
 export async function adminWrite(request: Request, e: AppEnv, resource: string, input: unknown) {
   const s = await requireSession(request, e, true);
+  if (resource === 'offline-enrollment') return enrollOffline(e, s.user.id, input);
   if (resource === 'settings') {
     const v = courseSchema.parse(input),
       keys = Object.keys(v);
@@ -271,6 +272,89 @@ export async function adminWrite(request: Request, e: AppEnv, resource: string, 
   }
   return { ok: true, id: recordId };
 }
+async function enrollOffline(e: AppEnv, actor: string, input: unknown) {
+  const { email } = z.object({ email: emailSchema }).parse(input);
+  const token = randomToken();
+  const tokenHash = await digest(token);
+  const expiresAt = Math.floor(Date.now() / 1000) + 7 * 86400;
+  const [, enrollment, , setup, , lookup] = await e.DB.batch<{
+    id: string;
+    role: string;
+    deletion_requested_at: string | null;
+    status: string | null;
+  }>([
+    statement(
+      e,
+      'INSERT INTO users(id,email) VALUES(?,?) ON CONFLICT(email) DO NOTHING',
+      crypto.randomUUID(),
+      email,
+    ),
+    statement(
+      e,
+      `INSERT INTO enrollments(id,user_id,course_id,status,terms_version,activated_at,offline_enrolled)
+       SELECT ?,id,?,'active','offline',CURRENT_TIMESTAMP,1 FROM users
+       WHERE email=? AND role='student' AND deletion_requested_at IS NULL
+       ON CONFLICT(user_id,course_id) DO UPDATE SET status='active',activated_at=CURRENT_TIMESTAMP,offline_enrolled=1
+       WHERE enrollments.status!='active' AND NOT EXISTS (
+         SELECT 1 FROM transactions WHERE enrollment_id=enrollments.id AND status IN ('pending','success')
+       )`,
+      crypto.randomUUID(),
+      COURSE_ID,
+      email,
+    ),
+    statement(
+      e,
+      `INSERT INTO admin_audit_logs(id,actor_id,action,entity_type,entity_id)
+       SELECT ?,?,'enroll_offline','enrollments',en.id FROM enrollments en
+       JOIN users u ON u.id=en.user_id WHERE u.email=? AND en.course_id=? AND changes()=1`,
+      crypto.randomUUID(),
+      actor,
+      email,
+      COURSE_ID,
+    ),
+    statement(
+      e,
+      `INSERT INTO student_password_setups(user_id,token_hash,expires_at)
+       SELECT u.id,?,? FROM users u JOIN enrollments en ON en.user_id=u.id
+       WHERE u.email=? AND u.role='student' AND u.password_hash IS NULL AND u.deletion_requested_at IS NULL
+         AND en.course_id=? AND en.status='active'
+       ON CONFLICT(user_id) DO UPDATE SET token_hash=excluded.token_hash,expires_at=excluded.expires_at`,
+      tokenHash,
+      expiresAt,
+      email,
+      COURSE_ID,
+    ),
+    statement(
+      e,
+      'DELETE FROM registration_secrets WHERE user_id=(SELECT user_id FROM student_password_setups WHERE token_hash=?)',
+      tokenHash,
+    ),
+    statement(
+      e,
+      `SELECT u.id,u.role,u.deletion_requested_at,en.status FROM users u
+       LEFT JOIN enrollments en ON en.user_id=u.id AND en.course_id=? WHERE u.email=?`,
+      COURSE_ID,
+      email,
+    ),
+  ]);
+  const student = lookup.results[0];
+  assert(
+    student?.role === 'student' && !student.deletion_requested_at,
+    409,
+    'This email cannot be used for student enrollment.',
+  );
+  assert(
+    student.status === 'active',
+    409,
+    'Reconcile the existing online payment before enrolling this student offline.',
+  );
+  return {
+    studentId: student.id,
+    enrolled: enrollment.meta.changes === 1,
+    setupUrl: setup.meta.changes === 1 ? new URL(`/activate#${token}`, e.APP_URL).href : null,
+  };
+}
+
 export async function adminDelete(request: Request, e: AppEnv, resource: string, id: string) {
   const s = await requireSession(request, e, true);
   assert(isEntity(resource), 400, 'This resource cannot be deleted');
@@ -403,6 +487,7 @@ async function privacyAction(e: AppEnv, actor: string, input: unknown) {
   await e.DB.batch([
     statement(e, 'DELETE FROM guardians WHERE user_id=?', row.user_id),
     statement(e, 'DELETE FROM auth_sessions WHERE user_id=?', row.user_id),
+    statement(e, 'DELETE FROM student_password_setups WHERE user_id=?', row.user_id),
     statement(
       e,
       'DELETE FROM auth_tokens WHERE email=(SELECT email FROM users WHERE id=?)',

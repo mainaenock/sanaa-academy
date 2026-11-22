@@ -110,15 +110,29 @@ export async function resendWelcome(e: AppEnv, userId: string) {
     "SELECT recipient,subject,html FROM email_outbox WHERE user_id=? AND kind='welcome' ORDER BY created_at LIMIT 1",
     userId,
   );
-  assert(row, 404, 'Enrollment confirmation message not found.');
+  const offline = row
+    ? null
+    : await first<{ email: string }>(
+        e,
+        `SELECT u.email FROM users u JOIN enrollments en ON en.user_id=u.id
+     WHERE u.id=? AND en.offline_enrolled=1 AND en.status='active'`,
+        userId,
+      );
+  const recipient = row?.recipient ?? offline?.email;
+  assert(recipient, 404, 'Enrollment confirmation message not found.');
   const id = crypto.randomUUID();
   await queueEmail(e, {
     id,
     key: id,
     userId,
-    to: row.recipient,
-    subject: row.subject,
-    html: row.html,
+    to: recipient,
+    subject: row?.subject ?? 'You are enrolled — Sanaa Academy',
+    html:
+      row?.html ??
+      emailTemplate(
+        'Your enrollment is confirmed',
+        `<p>Sign in to your <a href="${new URL('/portal', e.APP_URL).href}">student portal</a> to access lessons and track your progress. If this is your first time signing in, ask the academy for your setup link.</p>`,
+      ),
     kind: 'welcome',
   });
   return deliverEmail(e, id);

@@ -420,10 +420,12 @@
   padding: 0 0 12px;
   overflow-x: auto;
   list-style: none;
-  scroll-behavior: smooth;
   scroll-snap-type: x mandatory;
   scrollbar-width: thin;
   scrollbar-color: var(--accent-strong) var(--border);
+}
+.learning-portfolio-track[data-loop] {
+  scroll-snap-type: none;
 }
 .learning-portfolio-track > li {
   display: flex;
@@ -466,11 +468,6 @@
   font-size: 14px;
   font-weight: 700;
   line-height: 1.45;
-}
-@media (prefers-reduced-motion: reduce) {
-  .learning-portfolio-track {
-    scroll-behavior: auto;
-  }
 }
 .learning-editorial-header {
   padding-bottom: 24px;

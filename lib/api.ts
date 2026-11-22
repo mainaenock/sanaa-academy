@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { adminDelete, adminRead, adminWrite, exportStudents } from './admin';
-import { logout, loginPassword, requireEnrollment, requireSession } from './auth';
+import { activateStudent, logout, loginPassword, requireEnrollment, requireSession } from './auth';
 import { course, first, checkoutReady, site, statement, type AppEnv } from './db';
 import { assert, errorResponse, jsonBody, rateLimit, sameOrigin, HttpError } from './http';
 import {
@@ -34,6 +34,8 @@ export async function handleApi(request: Request, e: AppEnv): Promise<Response> 
     }
     if (path === 'auth/login' && request.method === 'POST')
       return await loginPassword(request, e, await jsonBody(request));
+    if (path === 'auth/activate-student' && request.method === 'POST')
+      return await activateStudent(request, e, await jsonBody(request));
     if (path === 'auth/logout' && request.method === 'POST') return await logout(request, e);
     if (path === 'unsubscribe' && request.method === 'POST') {
       const v = z

@@ -44,7 +44,7 @@ export function LoginForm({
         <KeyRound size={22} />
       </div>
       <h2 style={{ marginTop: 23 }}>Welcome back.</h2>
-      <p className="muted">Sign in with the email and password you chose when registering.</p>
+      <p className="muted">Sign in with your enrollment email and password.</p>
       {!ready && (
         <div className="notice">Secure sign-in is being configured. Please try again later.</div>
       )}

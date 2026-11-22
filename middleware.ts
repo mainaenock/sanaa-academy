@@ -21,7 +21,7 @@ export function middleware(request: NextRequest) {
   );
   if (request.nextUrl.protocol === 'https:')
     response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  if (/^\/(admin|portal|login|register|payment|unsubscribe|api)(\/|$)/.test(path)) {
+  if (/^\/(admin|portal|login|activate|register|payment|unsubscribe|api)(\/|$)/.test(path)) {
     response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
     response.headers.set('Cache-Control', 'private, no-store');
   }
