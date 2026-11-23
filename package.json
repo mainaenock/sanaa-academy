@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "npm",
   "dependencies": {
+    "@aiden0z/pptx-renderer": "1.4.0",
     "@noble/hashes": "2.0.1",
     "react": "latest",
     "react-dom": "latest",

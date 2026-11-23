@@ -15,6 +15,7 @@ import { privacy, studentData, submitAssignment, updateProfile, updateProgress }
 import { quote, registrationAvailable } from './domain';
 import { digest } from './crypto';
 import { resendWelcome } from './email';
+import { downloadResource, resourceUpload } from './resources';
 export async function handleApi(request: Request, e: AppEnv): Promise<Response> {
   try {
     const url = new URL(request.url),
@@ -89,6 +90,8 @@ export async function handleApi(request: Request, e: AppEnv): Promise<Response> 
     }
     if (path === 'student' && request.method === 'GET')
       return Response.json(await studentData(e, s.user.id));
+    if (path === 'student/resource-file' && request.method === 'GET')
+      return await downloadResource(e, s.user.id, url.searchParams.get('id') ?? '');
     if (path === 'student/resend' && request.method === 'POST') {
       await requireEnrollment(e, s.user.id);
       await rateLimit(e, 'welcome-resend:' + s.user.id, 3, 86400);
@@ -128,6 +131,14 @@ export async function handleApi(request: Request, e: AppEnv): Promise<Response> 
     if (path.startsWith('admin/')) {
       const resource = path.slice(6);
       if (request.method === 'GET') return Response.json(await adminRead(e, resource, url));
+      if (
+        resource === 'resources' &&
+        request.method === 'POST' &&
+        request.headers.get('content-type')?.startsWith('multipart/form-data;')
+      ) {
+        const { input, file } = await resourceUpload(request);
+        return Response.json(await adminWrite(request, e, resource, input, file));
+      }
       if (request.method === 'POST')
         return Response.json(await adminWrite(request, e, resource, await jsonBody(request)));
       if (request.method === 'DELETE')

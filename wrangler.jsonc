@@ -20,6 +20,12 @@
 			"remote": true
 		},
 	],
+	"r2_buckets": [
+		{
+			"binding": "RESOURCE_FILES",
+			"bucket_name": "sanaa-academy-resources",
+		},
+	],
 	"vars": {
 		"APP_URL": "https://sanaacademy.co.ke",
 		"APP_ENV": "production",

@@ -80,7 +80,7 @@ export const entities = {
         lesson_id: nullableId,
         title,
         description: text,
-        url: safeUrl,
+        url: z.union([z.literal(''), safeUrl]).default(''),
         kind: z.enum(['documentation', 'notes', 'recording', 'download', 'tool']),
         position,
       })
@@ -89,11 +89,11 @@ export const entities = {
       titleField,
       { key: 'lesson_id', label: 'Linked lesson (optional)' },
       { key: 'description', label: 'Description', type: 'textarea' },
-      { key: 'url', label: 'Resource URL', type: 'url', required: true },
       {
         key: 'kind',
         label: 'Type',
         type: 'select',
+        required: true,
         options: ['documentation', 'notes', 'recording', 'download', 'tool'],
       },
       positionField,

@@ -17,6 +17,7 @@ import type { StudentData, Assignment, LiveSession } from '@/lib/view-types';
 import { currentWeek } from '@/lib/format';
 import { api, formValues } from './client-api';
 import { WorkspaceShell } from './workspace-shell';
+import { ResourceActions } from './resource-actions';
 export function StudentApp({
   user,
   csrf,
@@ -244,9 +245,7 @@ export function StudentApp({
                     <strong>{r.title}</strong>
                     <small>{r.kind}</small>
                   </div>
-                  <a className="text-link" href={r.url} target="_blank" rel="noreferrer">
-                    Open resource ↗
-                  </a>
+                  <ResourceActions resource={r} />
                 </div>
               ))}
           </article>
@@ -344,9 +343,7 @@ export function StudentApp({
               </div>
               <h3>{r.title}</h3>
               <p className="muted">{r.description}</p>
-              <a className="text-link" href={r.url} target="_blank" rel="noopener noreferrer">
-                Open resource ↗
-              </a>
+              <ResourceActions resource={r} />
             </article>
           ))
         ) : (

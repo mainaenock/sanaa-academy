@@ -3,6 +3,7 @@ import { requireEnrollment, requireSession, userExport } from './auth';
 import { all, course, first, statement, type AppEnv } from './db';
 import { assert } from './http';
 import { safeUrl } from './domain';
+import { visibleResource } from './resources';
 export async function studentData(e: AppEnv, userId: string) {
   const en = await requireEnrollment(e, userId),
     c = await course(e);
@@ -35,7 +36,9 @@ export async function studentData(e: AppEnv, userId: string) {
     ),
     all(
       e,
-      'SELECT r.* FROM resources r WHERE r.course_id=? AND (r.lesson_id IS NULL OR EXISTS(SELECT 1 FROM lessons l WHERE l.id=r.lesson_id AND l.published=1)) ORDER BY r.position',
+      'SELECT r.id,r.course_id,r.lesson_id,r.title,r.description,r.url,r.kind,r.position,r.file_name FROM resources r WHERE ' +
+        visibleResource +
+        ' ORDER BY r.position',
       en.course_id,
     ),
     all(

@@ -102,6 +102,8 @@ Set the source Wrangler vars to your actual HTTPS origin, `APP_ENV=production`, 
 
 The deploy command does not apply D1 migrations. Before deploying code that depends on a migration, check `wrangler d1 migrations list sanaa-academy --remote`, run `npm run db:migrate:remote` when migrations are pending, and confirm the list is clear.
 
+Create the private R2 bucket `sanaa-academy-resources` in the Worker’s account before deploying resource uploads. Keep public access disabled. The `RESOURCE_FILES` binding serves uploads through the authenticated portal.
+
 ```powershell
 npm run types
 npm run typecheck

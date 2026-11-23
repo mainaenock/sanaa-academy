@@ -8,6 +8,7 @@ import { settle } from '../lib/payments';
 import { quote } from '../lib/domain';
 import { defaultCourse } from '../lib/defaults';
 import { deliverEmail, queueEmail } from '../lib/email';
+import { POWERPOINT_TYPE } from '../lib/resource-file';
 const e: AppEnv = env;
 async function account(role = 'student') {
   const id = crypto.randomUUID(),
@@ -85,6 +86,113 @@ beforeEach(async () => {
   await statement(e, 'DELETE FROM rate_limits').run();
 });
 afterEach(() => vi.restoreAllMocks());
+
+describe('course resource files', () => {
+  const metadata = {
+    course_id: 'ai-web-2026',
+    lesson_id: 'daily-lesson-1-1',
+    title: 'Day 1 slides',
+    description: '',
+    url: '',
+    kind: 'notes',
+    position: 1,
+  };
+  const pptxBytes = new Uint8Array([0x50, 0x4b, 3, 4, 5]);
+
+  function upload(user: Account, data = metadata, id?: string, csrf = user.csrf) {
+    const body = new FormData();
+    body.append('metadata', JSON.stringify({ id, data }));
+    body.append('file', new File([pptxBytes], 'Day 1 slides.pptx'));
+    return handleApi(
+      new Request('http://localhost:5173/api/admin/resources', {
+        method: 'POST',
+        headers: { Origin: 'http://localhost:5173', Cookie: user.cookie, 'x-csrf-token': csrf },
+        body,
+      }),
+      e,
+    );
+  }
+
+  it('uploads, replaces, and deletes an attachment with private student access', async () => {
+    const [admin, student, pending] = await Promise.all([account('admin'), account(), account()]);
+    await enrollment(student, 'active');
+    await enrollment(pending);
+    expect((await upload(student)).status).toBe(403);
+    expect((await upload(admin, metadata, undefined, 'invalid')).status).toBe(403);
+
+    const created = await upload(admin);
+    expect(created.status).toBe(200);
+    const { id } = await created.json<{ id: string }>();
+    const path = 'student/resource-file?id=' + id;
+    const old = await first<{ file_key: string }>(
+      e,
+      'SELECT file_key FROM resources WHERE id=?',
+      id,
+    );
+    expect(await e.RESOURCE_FILES.head(old!.file_key)).not.toBeNull();
+    expect((await handleApi(request(path), e)).status).toBe(401);
+    expect((await handleApi(request(path, undefined, pending), e)).status).toBe(403);
+
+    const access = await handleApi(request(path, undefined, student), e);
+    expect(access.status).toBe(200);
+    expect(access.headers.get('content-type')).toBe(POWERPOINT_TYPE);
+    expect(access.headers.get('content-disposition')).toContain('Day%201%20slides.pptx');
+    expect(access.headers.get('cache-control')).toBe('private, no-store');
+    expect(new Uint8Array(await access.arrayBuffer())).toEqual(pptxBytes);
+    const portal = await (
+      await handleApi(request('student', undefined, student), e)
+    ).json<{
+      resources: { id: string; file_name?: string; file_key?: string }[];
+    }>();
+    expect(portal.resources.find((resource) => resource.id === id)).toMatchObject({
+      file_name: 'Day 1 slides.pptx',
+    });
+    expect(portal.resources.find((resource) => resource.id === id)).not.toHaveProperty('file_key');
+
+    expect(
+      (await handleApi(request('admin/resources', { id, data: metadata }, admin), e)).status,
+    ).toBe(200);
+    expect(await e.RESOURCE_FILES.head(old!.file_key)).not.toBeNull();
+    expect((await upload(admin, { ...metadata, lesson_id: 'lesson-1-1' }, id)).status).toBe(200);
+    expect(await e.RESOURCE_FILES.head(old!.file_key)).toBeNull();
+    expect((await handleApi(request(path, undefined, student), e)).status).toBe(404);
+
+    const replacement = await first<{ file_key: string }>(
+      e,
+      'SELECT file_key FROM resources WHERE id=?',
+      id,
+    );
+    expect(
+      (await handleApi(request('admin/resources?id=' + id, undefined, admin, 'DELETE'), e)).status,
+    ).toBe(200);
+    expect(await e.RESOURCE_FILES.head(replacement!.file_key)).toBeNull();
+    const audit = await first<{ total: number }>(
+      e,
+      'SELECT COUNT(*) AS total FROM admin_audit_logs WHERE entity_id=?',
+      id,
+    );
+    expect(audit?.total).toBe(4);
+  });
+
+  it('keeps link resources editable and rejects saves without a source', async () => {
+    const admin = await account('admin');
+    expect((await handleApi(request('admin/resources', { data: metadata }, admin), e)).status).toBe(
+      400,
+    );
+    const data = { ...metadata, url: 'https://example.com/reference' };
+    const response = await handleApi(request('admin/resources', { data }, admin), e);
+    expect(response.status).toBe(200);
+    const { id } = await response.json<{ id: string }>();
+    expect(
+      (await handleApi(request('admin/resources', { id, data: metadata }, admin), e)).status,
+    ).toBe(400);
+    expect(await first(e, 'SELECT url,file_name FROM resources WHERE id=?', id)).toEqual({
+      url: data.url,
+      file_name: null,
+    });
+  });
+});
+
 describe('real D1 settlement', () => {
   it('suppresses already-queued announcements after a learner opts out', async () => {
     const user = await account();

@@ -30,6 +30,7 @@ export interface Resource {
   title: string;
   description: string;
   url: string;
+  file_name: string | null;
   kind: string;
   position: number;
 }

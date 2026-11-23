@@ -1790,6 +1790,56 @@ p {
 .list-row:last-child {
   border-bottom: 0;
 }
+.resource-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+.presentation-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(1120px, calc(100% - 24px));
+  max-width: none;
+  height: min(90dvh, 960px);
+  max-height: none;
+  padding: 0;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.presentation-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.presentation-dialog::backdrop {
+  background: rgb(33 29 25 / 65%);
+}
+.presentation-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.presentation-header h2 {
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  overflow-wrap: anywhere;
+}
+.presentation-header .tiny {
+  margin: 4px 0 0;
+}
+.presentation-slides {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--paper);
+}
 .list-row strong {
   font-size: 12px;
   font-weight: 650;

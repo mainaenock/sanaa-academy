@@ -5,15 +5,16 @@ export async function api<T = Record<string, unknown>>(
   csrf?: string,
   method?: string,
 ): Promise<T> {
+  const multipart = body instanceof FormData;
   const response = await fetch('/api/' + path, {
     method: method ?? (body === undefined ? 'GET' : 'POST'),
     credentials: 'same-origin',
     cache: 'no-store',
     headers: {
-      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...(body === undefined || multipart ? {} : { 'Content-Type': 'application/json' }),
       ...(csrf ? { 'x-csrf-token': csrf } : {}),
     },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: multipart ? body : body === undefined ? undefined : JSON.stringify(body),
   });
   let result: T & { error?: unknown };
   try {

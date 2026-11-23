@@ -6,6 +6,7 @@ import { assert, HttpError } from './http';
 import { COURSE_ID, csvCell, emailSchema, escapeHtml } from './domain';
 import { deliverEmail, emailTemplate, resendWelcome } from './email';
 import { digest, randomToken } from './crypto';
+import { removeResourceFile, storeResourceFile } from './resources';
 export const studentSelect = `SELECT u.id,u.email,u.name,u.phone,u.age_category,u.created_at,en.id enrollment_id,en.status enrollment_status,en.activated_at,en.offline_enrolled,(SELECT COUNT(*) FROM lesson_progress p JOIN lessons l ON l.id=p.lesson_id JOIN modules m ON m.id=l.module_id JOIN weeks w ON w.id=m.week_id WHERE p.user_id=u.id AND l.published=1 AND w.course_id='ai-web-2026') completed_lessons FROM users u LEFT JOIN enrollments en ON en.user_id=u.id AND en.course_id='ai-web-2026' WHERE u.role='student'`;
 export async function adminOverview(e: AppEnv) {
   const [counts, payments, progress, upcoming, recent, privacy, emails] = await Promise.all([
@@ -94,10 +95,19 @@ export async function studentDetail(e: AppEnv, id: string) {
     lessons: await all(e, 'SELECT id,title FROM lessons WHERE published=1 ORDER BY position'),
   };
 }
-function audit(e: AppEnv, actor: string, action: string, entity: string, id: string, details = '') {
+function audit(
+  e: AppEnv,
+  actor: string,
+  action: string,
+  entity: string,
+  id: string,
+  details = '',
+  onlyIfChanged = false,
+) {
   return statement(
     e,
-    'INSERT INTO admin_audit_logs(id,actor_id,action,entity_type,entity_id,details) VALUES(?,?,?,?,?,?)',
+    'INSERT INTO admin_audit_logs(id,actor_id,action,entity_type,entity_id,details) ' +
+      (onlyIfChanged ? 'SELECT ?,?,?,?,?,? WHERE changes()=1' : 'VALUES(?,?,?,?,?,?)'),
     crypto.randomUUID(),
     actor,
     action,
@@ -133,7 +143,13 @@ export async function adminRead(e: AppEnv, resource: string, url: URL) {
     return all(e, `SELECT * FROM ${resource} ORDER BY ${entities[resource].order} LIMIT 1000`);
   throw new HttpError(404, 'Resource not found');
 }
-export async function adminWrite(request: Request, e: AppEnv, resource: string, input: unknown) {
+export async function adminWrite(
+  request: Request,
+  e: AppEnv,
+  resource: string,
+  input: unknown,
+  file?: File,
+) {
   const s = await requireSession(request, e, true);
   if (resource === 'offline-enrollment') return enrollOffline(e, s.user.id, input);
   if (resource === 'settings') {
@@ -238,6 +254,7 @@ export async function adminWrite(request: Request, e: AppEnv, resource: string, 
   }
   assert(isEntity(resource), 404, 'Resource not found');
   const envelope = z.object({ id: z.string().max(100).optional(), data: z.unknown() }).parse(input);
+  if (resource === 'resources') return saveResource(e, s.user.id, envelope, file);
   const v = entities[resource].schema.parse(envelope.data),
     keys = Object.keys(v),
     recordId = envelope.id ?? crypto.randomUUID();
@@ -272,6 +289,80 @@ export async function adminWrite(request: Request, e: AppEnv, resource: string, 
   }
   return { ok: true, id: recordId };
 }
+
+async function saveResource(
+  e: AppEnv,
+  actor: string,
+  envelope: { id?: string; data?: unknown },
+  file?: File,
+) {
+  const { url, ...fields } = entities.resources.schema.parse(envelope.data);
+  assert(!file || !url, 400, 'Choose either a file or a resource URL.');
+  if (fields.lesson_id)
+    assert(
+      await first(
+        e,
+        'SELECT l.id FROM lessons l JOIN modules m ON m.id=l.module_id JOIN weeks w ON w.id=m.week_id WHERE l.id=? AND w.course_id=?',
+        fields.lesson_id,
+        fields.course_id,
+      ),
+      400,
+      'Choose a lesson from this course.',
+    );
+
+  const id = envelope.id ?? crypto.randomUUID();
+  assert(file || url || envelope.id, 400, 'Choose a file or enter a resource URL.');
+  const attachment = file ? await storeResourceFile(e, file) : null;
+  const replace = Boolean(file || url);
+  const data = replace
+    ? { ...fields, url, file_key: attachment?.key ?? null, file_name: attachment?.name ?? null }
+    : fields;
+  const columns = Object.keys(data);
+  const values = Object.values(data);
+  const write = envelope.id
+    ? statement(
+        e,
+        'UPDATE resources SET ' +
+          columns.map((column) => column + '=?').join(',') +
+          ' WHERE id=?' +
+          (replace ? '' : ' AND file_key IS NOT NULL'),
+        ...values,
+        id,
+      )
+    : statement(
+        e,
+        'INSERT INTO resources(id,' +
+          columns.join(',') +
+          ') VALUES(' +
+          Array(columns.length + 1)
+            .fill('?')
+            .join(',') +
+          ')',
+        id,
+        ...values,
+      );
+
+  const [previous, saved] = await e.DB.batch<{ file_key: string | null }>([
+    statement(e, 'SELECT file_key FROM resources WHERE id=?', id),
+    write,
+    audit(e, actor, envelope.id ? 'update' : 'create', 'resources', id, '', true),
+  ]).catch(async () => {
+    await removeResourceFile(e, attachment?.key);
+    throw new HttpError(
+      400,
+      'Resource could not be saved. Check the required fields and try again.',
+    );
+  });
+
+  if (!saved.meta.changes) {
+    await removeResourceFile(e, attachment?.key);
+    assert(previous.results.length, 404, 'Record not found');
+    throw new HttpError(400, 'Choose a file or enter a resource URL.');
+  }
+  if (replace) await removeResourceFile(e, previous.results[0]?.file_key);
+  return { ok: true, id };
+}
+
 async function enrollOffline(e: AppEnv, actor: string, input: unknown) {
   const { email } = z.object({ email: emailSchema }).parse(input);
   const token = randomToken();
@@ -358,6 +449,15 @@ async function enrollOffline(e: AppEnv, actor: string, input: unknown) {
 export async function adminDelete(request: Request, e: AppEnv, resource: string, id: string) {
   const s = await requireSession(request, e, true);
   assert(isEntity(resource), 400, 'This resource cannot be deleted');
+  if (resource === 'resources') {
+    const [deleted] = await e.DB.batch<{ file_key: string | null }>([
+      statement(e, 'DELETE FROM resources WHERE id=? RETURNING file_key', id),
+      audit(e, s.user.id, 'delete', 'resources', id, '', true),
+    ]);
+    assert(deleted.results.length, 404, 'Record not found');
+    await removeResourceFile(e, deleted.results[0].file_key);
+    return { ok: true };
+  }
   assert(await first(e, `SELECT id FROM ${resource} WHERE id=?`, id), 404, 'Record not found');
   await e.DB.batch([
     statement(e, `DELETE FROM ${resource} WHERE id=?`, id),

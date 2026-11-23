@@ -8,6 +8,7 @@ export default defineConfig({
         compatibilityDate: '2026-10-17',
         compatibilityFlags: ['nodejs_compat'],
         d1Databases: ['DB'],
+        r2Buckets: ['RESOURCE_FILES'],
         bindings: {
           APP_URL: 'http://localhost:5173',
           APP_ENV: 'development',

@@ -4,6 +4,7 @@ import { Plus, Save, Trash2, X } from 'lucide-react';
 import { entities, courseFields, type Field, type EntityName } from '@/lib/admin-model';
 import { api } from './client-api';
 import type { SiteContent } from '@/lib/defaults';
+import { RESOURCE_FILE_LIMIT, RESOURCE_FILE_LIMIT_MB } from '@/lib/resource-file';
 export type Row = Record<string, unknown>;
 export function string(row: Row, key: string) {
   return String(row[key] ?? '');
@@ -131,6 +132,10 @@ export function EntityEditor({
     [parents, setParents] = useState<Record<string, Row[]>>({}),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
+  const currentFile = record ? string(record, 'file_name') : '';
+  const [source, setSource] = useState(record && !currentFile ? 'link' : 'file');
+  const [resourceUrl, setResourceUrl] = useState(record ? string(record, 'url') : '');
+  const [file, setFile] = useState<File | null>(null);
   useEffect(() => {
     void Promise.all([
       api<Row[]>('admin/weeks'),
@@ -155,7 +160,18 @@ export function EntityEditor({
     try {
       const data = normalized(spec.fields, values);
       if (!['modules', 'lessons'].includes(entity)) data.course_id = 'ai-web-2026';
-      await api('admin/' + entity, { id: record?.id, data }, csrf);
+      if (entity === 'resources') data.url = source === 'link' ? resourceUrl.trim() : '';
+      const metadata = { id: record?.id, data };
+      if (entity === 'resources' && source === 'file' && file) {
+        if (file.size > RESOURCE_FILE_LIMIT)
+          throw new Error('Choose a file that is ' + RESOURCE_FILE_LIMIT_MB + ' MB or smaller.');
+        const form = new FormData();
+        form.append('metadata', JSON.stringify(metadata));
+        form.append('file', file);
+        await api('admin/resources', form, csrf);
+      } else {
+        await api('admin/' + entity, metadata, csrf);
+      }
       onSaved();
     } catch (error) {
       setError((error as Error).message);
@@ -179,6 +195,45 @@ export function EntityEditor({
         </div>
       )}
       <Fields fields={spec.fields} values={values} setValues={setValues} options={parents} />
+      {entity === 'resources' && (
+        <div className="form-grid">
+          <label className="field">
+            <span>Resource source</span>
+            <select
+              value={source}
+              onChange={(event) => {
+                setSource(event.target.value);
+                setFile(null);
+              }}
+            >
+              <option value="file">Upload a file</option>
+              <option value="link">Use a link</option>
+            </select>
+          </label>
+          {source === 'file' ? (
+            <label className="field">
+              <span>{currentFile ? 'Replace resource file (optional)' : 'Resource file'}</span>
+              <input
+                type="file"
+                required={!currentFile}
+                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              />
+              {currentFile && <small>Current file: {currentFile}</small>}
+              <small>Up to {RESOURCE_FILE_LIMIT_MB} MB. Upload a .pptx for slide viewing.</small>
+            </label>
+          ) : (
+            <label className="field">
+              <span>Resource URL</span>
+              <input
+                type="url"
+                required
+                value={resourceUrl}
+                onChange={(event) => setResourceUrl(event.target.value)}
+              />
+            </label>
+          )}
+        </div>
+      )}
       <div className="form-actions">
         <button className="btn" disabled={busy}>
           <Save size={14} />
